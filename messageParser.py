@@ -7,8 +7,23 @@ import re
 import unittest
 
 '''
-Quick documentation:
+##############
+## OVERVIEW ##
+##############
 
+parseContractInfo(String string)
+	Parses the given string into the relevant contract terms
+
+parseChainInfo(String string)
+	Given an option chain request, this returns the parsed ticker and date (if exists)
+
+parseChainInfoAtDate(String ticker, int timestamp)
+	Takes a ticker and a timestamp, and gets 5 options above and below the strike price
+
+
+
+
+##################### FIX
 Main methods:
  - getOptionInfo(String)
  	Returns option info specific to ONE option (mainly used for price checks)
@@ -25,7 +40,7 @@ Main methods:
 				(eg. $105, 105, $105.00, 105.00, 105., 105.0, 105.000, etc. are all valid)
 				Note: the strike price will accept at most 3 decimals (eg. XX.XXX). Any extras will be truncated
 
- - getAllOptions(String)
+ - parseChainInfo(String)
  	Returns ALL options which pass the filter 
 
  	Takes in a string which can be formatted in one of four ways:
@@ -46,11 +61,22 @@ Main methods:
 # the base URL
 baseURL = "https://query1.finance.yahoo.com/v7/finance/options/"
 
+# loadFrom(String url)
+# loads the data from the given URL
+def loadFrom(url):
+	with urllib.request.urlopen(url) as thisUrl:
+		return json.loads(thisUrl.read().decode())
 
+
+
+
+
+# parseContractInfo(String string)
 # Parses the given string into the relevant terms
-def stringParse(string):
-	string = string.upper()
-	split = string.split()
+def parseContractInfo(string):
+	string = string.upper() # Standardizes the string
+	split = string.split() # Splits it on all spaces
+
 	if len(split) == 3:
 		ticker = split[0]
 		dateAndType = split[1]
@@ -58,123 +84,148 @@ def stringParse(string):
 	else:
 		raise ValueError('String is not properly formatted')
 
-	# gets the bare ticker value
-	onlyAlpha = re.compile('[^a-zA-Z]')
-	ticker = onlyAlpha.sub('', ticker)
+	# Strips the ticker of any other characters (should only be $)
+	ticker = re.sub('[^a-zA-Z]', '', ticker)
 
 	#gets the date, and the option type
 	date = dateAndType[:-1]
 	date = parser.parse(date, tzinfos={None: 0})
 	dateAsString = date.strftime('%y%m%d')
 
+	# Gets the option type
 	optionType = dateAndType[-1:]
 
 	#gets the bare stock price
-	numAndDec = re.compile("[^0-9.]")
-	strike = numAndDec.sub('', strike)
+	strike = re.sub('[^0-9.]', '', strike)
 
+	# Formats the decimals of the stock price
 	if "." in strike:
-		if len(strike.split(".")[1]) > 3:
-			strike = strike + "." + strike.split(".")[1][:3]
-		elif len(strike.split(".")[1]) == 2:
-			strike += "0"	
-		elif len(strike.split(".")[1]) == 1:
-			strike += "00"
-		elif len(strike.split(".")[1]) == 0:
-			strike += "000"
+		length = len(strike.split(".")[1])
+		if length > 3:
+			strike += "." + length[:3] # Truncates it
 		else:
-			strike = strike
+			for i in range(length, 3):
+				strike += "0"
 	else:
 		strike += ".000"
 
-	strikeAsString = re.sub("[^0-9]", "", strike)
+	# Gets the stock price as a string
+	strikeAsString = re.sub('[^0-9]', '', strike)
 	for i in range(len(strikeAsString), 8):
-		strikeAsString = "0" + strikeAsString
+		strikeAsString = "0" + strikeAsString # Adds leading 0s to fill the string
+
+	# Concatenates the strings to form the contract symbol
+	contractSymbol = "{0}{1}{2}{3}".format(ticker, dateAsString, optionType, strikeAsString)
+
+	# Returns the ticker, the date, the option type, the strike, and the symbol
+	return ticker, date, optionType, strike, contractSymbol
 
 
-	string = ticker + dateAsString + optionType + strikeAsString
 
-	return ticker, date, optionType, strike, string
 
-def getAllOptions(string):
-	# Four types of calls
-	# just the ticker
-	# the ticker and a date
-	# the ticker and a type
-	# and the ticker and a date/type
 
-	string = string.upper()
-	split = string.split()
-	ticker = re.sub('[^a-zA-Z]', '', split[0])
+# parseChainInfo(String string)
+# Given an option chain request, this returns the parsed ticker and date (if exists)
+def parseChainInfo(string):
+	# Two types of requests
+	# just the ticker, or a ticker and a date
 
+	string = string.upper() # Formats the string
+	split = string.split() 
+
+	ticker = re.sub('[^a-zA-Z]', '', split[0]) # Cleans the ticker
+
+	# Checks if the date is included
 	if len(split) == 1:
 		date = None
-		optionType = None
 	elif len(split) == 2:
-		second = split[1]
-		potentialTypes = ["C", "P", "CALLS", "CALL", "PUTS", "PUT"]
-		if second in potentialTypes:
-			optionType = second
-			date = None
-		elif second[-1:] in potentialTypes:
-			optionType = second[-1:]
-			date = parser.parse(second[:-1], tzinfos={None: 0})
-		else:
-			date = parser.parse(second, tzinfos={None: 0})
-			optionType = None
+		date = parser.parse(split[1], tzinfos={None: 0})
 	else:
 		raise ValueError('String is not properly formatted')
 
-	# We now have a ticker, and might have an optionType and a date
-	return ticker, date, optionType
-	
+	# We now have a ticker, and might have a date
+	return ticker, date
 
-def getAllOptionsAtDate(ticker, ts, option=None):
 
-	url = baseURL + ticker + "?date=" + str(ts)
-	with urllib.request.urlopen(url) as thisUrl:
-		data = json.loads(thisUrl.read().decode())
-		data = data['optionChain']['result'][0]['options'][0]
-	
-	if option != None:
-		optionTypeStr = {'C': 'calls', 'P': 'puts'}[option]
-		options = data[optionTypeStr]
-	else:
-		options = data['calls'] + data['puts']
 
-	return options
+
+
+# parseChainInfoAtDate(String ticker, int timestamp)
+# Takes a ticker and a timestamp, and gets 5 options above and below the strike price
+def parseChainInfoAtDate(ticker, timestamp):
+	url = baseURL + ticker + "?date=" + str(timestamp)
+	print(url)
+
+	# Loads all the data
+	try: 
+		data = loadFrom(url)['optionChain']['result'][0]
+		allOptions = data['options'][0]
+		strikes = data['strikes']
+		lastPrice = data['quote']['regularMarketPreviousClose']
+	except:
+		raise ValueError("No data found")
+		return
+
+	# Finds the strikes closest to the lastPrice
+	for i in range(5, len(strikes)-1):
+		if strikes[i] >= lastPrice:
+			strikesRange = [strikes[j] for j in range(i-5, i+6)]
+			break
+
+	# Grabs all the options with the aforementioned strikesRange
+	calls = [option for option in allOptions['calls'] if option['strike'] in strikesRange]
+	puts = [option for option in allOptions['puts'] if option['strike'] in strikesRange]
+
+	return calls, puts
+
+
+
+
+
+# getOptionInfo(String string)
+# Given a string, it parses it and returns the corresponding option
 
 def getOptionInfo(string):
-	ticker, date, optionType, strike, contractString = stringParse(string)
+	# parses the string
+	ticker, date, optionType, strike, contractSymbol = parseContractInfo(string)
 	timestamp = int(date.timestamp())
 
 	url = baseURL + ticker + "?date=" + str(timestamp)
-	with urllib.request.urlopen(url) as thisUrl:
-		data = json.loads(thisUrl.read().decode())
-		data = data['optionChain']['result'][0]
+	data = loadFrom(url)['optionChain']['result'][0]
 
+	# Gets the corresponding option type
 	optionTypeStr = {'C': 'calls', 'P': 'puts'}[optionType]
 	options = data['options'][0][optionTypeStr]
 
-	for option in options:
-		if option['contractSymbol'] == contractString:
-			thisOption = option
+	thisOption = [option for option in options if option['contractSymbol'] == contractSymbol]
+
+	try:
+		thisOption = thisOption[0]
+	except:
+		raise ValueError("Could not find corresponding option")
+		return
 
 	return thisOption
+
+
+
+
+def getDurationInfo(time, maxDur=60):
+	num = int(time[:-1])
+	mult = {"D": 1, "M": 30, "Y": 365}[time[-1:]]
+	return min(num * mult, maxDur)
 
 def getChartInfo(string):
 	string = string.upper()
 	time = string.split(" ")[-1]
 	if time[-1:].isalpha():
-		num = int(time[:-1])
-		mult = {"D": 1, "M": 30}[time[-1:]]
-		num = min(num * mult, 60)
+		num = getDurationInfo(time)
 
 	optionsInfo = getOptionInfo(string.replace(time, ''))
 	return num, optionsInfo
 
 
-def contractStringToInfo(string):
+def contractSymbolToInfo(string):
 	tickerAndDate = string[:-8]
 	ticker = re.match("^[a-zA-Z]+", tickerAndDate).group()
 
@@ -195,16 +246,14 @@ def contractStringToInfo(string):
 	return ticker, date, optionType, strike
 	
 
-def contractStringToData(string):
-	ticker, date, optionType, strike = contractStringToInfo(string)
+def contractSymbolToData(string):
+	ticker, date, optionType, strike = contractSymbolToInfo(string)
 
 	timestamp = int(date.timestamp())
 
 	url = baseURL + ticker + "?date=" + str(timestamp)
 
-	with urllib.request.urlopen(url) as thisUrl:
-		data = json.loads(thisUrl.read().decode())
-		data = data['optionChain']['result'][0]['options'][0]
+	data = loadFrom(url)['optionChain']['result'][0]['options'][0]
 
 	for option in data[optionType]:
 		if option['contractSymbol'] == string:
@@ -216,7 +265,7 @@ def portfolioValue(array):
 	change = 0
 	percentChange = 0
 	for symbol in array:
-		info = contractStringToData(symbol)
+		info = contractSymbolToData(symbol)
 		value += info['lastPrice'] * 100
 		change += info['change'] * 100
 		percentChange += info['percentChange']
@@ -227,7 +276,7 @@ def portfolioValue(array):
 
 
 #main("aapl 4/17c 105")
-#print(contractStringToInfo("AAPL200424C00257500"))
+#print(contractSymbolToInfo("AAPL200424C00257500"))
 
 
 
@@ -238,7 +287,7 @@ def portfolioValue(array):
 
 class TestStringMethods(unittest.TestCase):
 	def initExamples(self, option):
-		return stringParse(option)
+		return parseContractInfo(option)
 
 
 	def test_parse(self):
@@ -268,4 +317,5 @@ class TestStringMethods(unittest.TestCase):
 		self.assertEqual(str1, str4)
 
 
-#unittest.main()
+if __name__ == "__main__":
+    unittest.main()

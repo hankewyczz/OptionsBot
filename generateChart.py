@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import matplotlib.ticker as mtick
 import numpy as np
+import messageParser as mp
 
 
 '''
@@ -12,7 +13,7 @@ import numpy as np
 ## OVERVIEW ##
 ##############
 
-getData(String symbol, int length)
+getData(String symbol, int length, int interval)
 	Takes the ticker/contract symbol and the duration of the chart
 
 extrapolateData(list[X] data, X prev, boolean append)
@@ -21,14 +22,17 @@ extrapolateData(list[X] data, X prev, boolean append)
 drawGraph(list[int] x, list[float] y, list[int] vol, String title, int length)
 	Takes lists of x, y, and volume data, and draws a graph
 
+generateChart(String string, String symbol, int length)
+	Takes the given string, the contract symbol, and the length of data to be viewed)
+
 '''
 
 # The base URL for fetching the chart data. (Replace here if/when yahoo gets tired of people mooching off  their API
 baseURL = "https://query1.finance.yahoo.com/v8/finance/chart/"
 
-# (String symbol, int length)
+# (String symbol, int length, int interval)
 # Takes the ticker/contract symbol and the duration of the chart
-def getData(symbol, length):
+def getData(symbol, length, interval):
 	# Gets the start and end dates of the chart based on the arg length
 	endDate = datetime.now()
 	startDate = endDate - timedelta(days=length)
@@ -40,7 +44,7 @@ def getData(symbol, length):
 	# All the URL arguments
 	# "interval" MUST be 2m. No clue why, but Yahoo throws a hissy fit if we try using other intervals, 
 	# even though it lists [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo] as valid intervals
-	urlArgs = {"period1": str(period1), "period2": str(period2), "interval": "2m", "includePrePost": "true"}
+	urlArgs = {"period1": str(period1), "period2": str(period2), "interval": interval, "includePrePost": "true"}
 
 	urlArgsString = ""
 	for key in urlArgs.keys():
@@ -51,8 +55,7 @@ def getData(symbol, length):
 	print(url)
 
 	# Grab the data from the URL
-	with urllib.request.urlopen(url) as thisUrl:
-		data = json.loads(thisUrl.read().decode())
+	data = mp.loadFrom(url)
 
 	try:
 		# Using time as the bellwether here - everything else, we can extrapolate
@@ -62,7 +65,10 @@ def getData(symbol, length):
 
 	price = data['chart']['result'][0]['indicators']['quote'][0]['close']
 	volume = data['chart']['result'][0]['indicators']['quote'][0]['volume']
-	prevClose = data['chart']['result'][0]['meta']['previousClose']
+	try:
+		prevClose = data['chart']['result'][0]['meta']['previousClose']
+	except: 
+		prevClose = data['chart']['result'][0]['meta']['chartPreviousClose']
 	
 	# Extrapolates data to fit every point (Yahoo has some [many] blind spots for some [most] contracts)
 	price = extrapolateData(price, prevClose, True)
@@ -155,12 +161,11 @@ def drawGraph(x, y, vol, symbol, title, length):
 	# Returns the filename
 	return name
 
-
-def generateChart(string, symbol, length):
-	time, price, volume = getData(symbol, length)
+# (String string, String symbol, int length)
+# Takes the given string, the contract symbol, and the length of data to be viewed
+def generateChart(string, symbol, length, interval="2m"):
+	time, price, volume = getData(symbol, length, interval)
 	cleanTitle = string.upper()
 	cleanTitle = cleanTitle.replace("$", "\$")
 
 	return drawGraph(time, price, volume, symbol, cleanTitle, length)
-
-print(generateChart("$SPX 6/19C $2750 3d", "SPX200619C02750000", 5))

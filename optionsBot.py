@@ -1,22 +1,61 @@
-import os
-import random
+# Discord specific
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+# From project
 import messageParser as mp
 import generateChart as gc
+# General
+import os
 from datetime import datetime
-import urllib.request
 import json
 
+# Loads the env file (contains the token)
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='!')
 
-@bot.command(name='steven', help='he is a simp no doubt about it')
+# Initializes with command prefix
+bot = commands.Bot(command_prefix='!')
+bot.remove_command('help') # Removes the default help command
+
+# Changes the bot presence state
+@bot.event
+async def on_ready():
+	await bot.change_presence(activity=discord.Game(name='!help'))
+
+# New help command
+@bot.command(name='help')
+async def help(ctx):
+	embed = discord.Embed(title="OptionsBot Help", description="Commands and descriptions", color=0x0000ff)
+
+	misc = ("`!ping` : Responds 'pong'\n\n`!steven` : Checks if Steven is a simp")
+	
+	options = ("`!op <TICKER> <DATE><TYPE> <STRIKE>` : Returns information about a specific option. The string formatting is pretty loose "
+	 "(aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p $400.50`, `!op T 1/18/22C 2010.50`\n\n"
+	 "`!ops <TICKER> <DATE>**`\n`(alias: !optionchain, !opc)` : Returns information about an options chain. Calling `!ops <TICKER>` will return a list of availible dates, " 
+	 "and calling `!ops <TICKER> <DATE>` will return more specific information\n\n")
+
+	charting = ("`!c <TICKER> <DATE><TYPE> <STRIKE> <DURATION>` : Returns a chart of the price and volume of an option. "
+		"The formatting is identical to `!op`, with the addition of a <DURATION> field. This takes a numberical value and date type "
+		"(valid options are 'd', 'm', 'y'). **NOTE**: it is unlikely that data will be availible for the option "
+		"more than a month back.\n\n`!chartstock <STOCK_TICKER> <DURATION>`\n`(alias: !cs)` : Returns a chart of the price "
+		"and volume of a STOCK")
+
+	embed.add_field(name="Misc", value=misc, inline=False)
+	embed.add_field(name="Options", value=options, inline=False)
+	embed.add_field(name="Charting", value=charting, inline=False)
+	await ctx.send(embed=embed)
+
+
+@bot.command(name='steven')
 async def steven(ctx):
     await ctx.send("is a simp")
+
+@bot.command(name='ping')
+async def ping(ctx):
+    await ctx.send("pong", delete_after=1)
+    await ctx.message.delete()
 
 @bot.command(name='ekho')
 async def ekho(ctx, *args):
@@ -28,12 +67,20 @@ async def ekho(ctx, *args):
 async def purge(ctx, number):
     await ctx.message.channel.purge(limit=int(number)+1)
 
+
+
+
+
+'''
+async def alias_command(self, player, message):
+    return await self.real_command(player, message)'''
+
 @bot.command(name='op')
 async def op(ctx, *args):
 	string = ' '.join(args)
 	optionInfo = mp.getOptionInfo(string)
 
-	t, d, o, s, st = mp.stringParse(string)
+	t, d, o, s, st = mp.parseContractInfo(string)
 	cleanOp = "$" + str(t) + " " + d.strftime('%m/%d') + o + " $" + s
 
 	change = round(optionInfo['change'], 2)
@@ -63,82 +110,147 @@ async def op(ctx, *args):
 
 
 	await ctx.send(embed=embed)
+
+
 	
 
 
+# Returns an option chain
+# Takes a ticker and (optionally) a date
+@bot.command(name='optionchain')
+async def optionchain(ctx, *args):
+    return await ops(ctx, *args)
+
+# Alias command
+@bot.command(name='opc')
+async def opc(ctx, *args):
+    return await ops(ctx, *args)
+
+# Alias command
 @bot.command(name='ops')
 async def ops(ctx, *args):
 	string = ' '.join(args)
-	ticker, date, optionType = mp.getAllOptions(string)
 
-	embed = discord.Embed(title=string.upper(), color=0x0000ff,)
+	# Tries to parse the string
+	try:
+		ticker, date = mp.parseChainInfo(string)
+	except:
+		await ctx.send("No data found. Please check the formatting and the ticker spelling")
+		return
 
+	# Initializes the embed
+	embed = discord.Embed(title=string.upper(), description=("When a date is specified, 5 options above/below "
+		"the current price will be returned\nFormat: `Strike Price`\nCall Option\nPut Option"), color=0x0000ff)
+
+	# Makes the URL	
 	url = mp.baseURL + ticker
+
+	# If we're not given a date:
 	if date == None:
-		with urllib.request.urlopen(url) as thisUrl:
-			data = json.loads(thisUrl.read().decode())
-			data = data['optionChain']['result'][0]['expirationDates']
+		data = mp.loadFrom(url)['optionChain']['result'][0]['expirationDates']
 
 		result = ""
 		for datum in data:
 			date = datetime.utcfromtimestamp(datum)
 			if date.year == 2020:
-				date = date.strftime('%m/%d')
+				date = date.strftime('%b %d')
 			else:
 				date = date.strftime('%m/%d/%y')
 			result += str(date) + ", "
 
 		embed.add_field(name="Availible Dates", value=result)
 		embed.add_field(name="More Info", value="To search more specifically, use `!ops ticker date`", inline=False)
-
-	elif optionType == None:
-		results = mp.getAllOptionsAtDate(ticker, int(date.timestamp()))
-		for i in range(0, 20):
-			result = results[i]
-			date = datetime.utcfromtimestamp(result['expiration'])
-			if date.year == 2020:
-				date = date.strftime('%m/%d')
-			else:
-				date = date.strftime('%m/%d/%y')
-
-			optionType = str(result['contractSymbol'][-9:-8])
-
-			if "bid" in result:
-				bid = result['bid']
-			else:
-				bid = 0.0
-
-			ba = str(bid) + " / " + str(result['ask'])
-
-			name = date + " " + {"C": "CALL", "P": "PUT"}[optionType] + " $" + str(result['strike'])
-
-
-			result = "**Last price:** " + str(result['lastPrice']) + ", **Change:** " + str(result['change']) + "/" + str(result['percentChange']) + "%"
-			embed.add_field(name=name, value=result)
 	else:
-		return getAllOptionsAtDate(ticker, int(date.timestamp()), option=optionType)
+		# We have a date : try to get the info
+		try:
+			calls, puts = mp.parseChainInfoAtDate(ticker, int(date.timestamp()))
+		except:
+			await ctx.send("No data found. Please check the formatting, ticker spelling, and date")
+			return
 
+		for i in range(0, len(calls)-1):
+			
+			# Formats the information displayed for each option
+			strike = "Strike: {}".format(calls[i]['strike'])
 
-	
-	'''
-	for option in optionsInfo:
-		t, d, o, s = mp.contractStringToInfo(option['contractSymbol'])
-		cleanOp = "$" + str(t) + " " + d.strftime('%m/%d') + o + " $" + s
-		info = "Last Price: $" + str(option['lastPrice']), "Change: " + str(option['change'])
+			value = ""
+			for type in [calls, puts]:
+				price = "**__Price__**: ${0}".format(round(type[i]['lastPrice'], 2))
+				change = "{0}%".format(round(type[i]['percentChange'], 2))
+				vol = "**__Vol / OI__**: {0} / {1}".format(type[i]['volume'], type[i]['openInterest'])
 
-		embed.add_field(name=cleanOp, value=info)
-	'''
+				string = "{0} ({1}),  {2}\n".format(price, change, vol)
+				value += string
+
+			embed.add_field(name=strike, value=value, inline=False)
 
 	embed.set_footer(text="Data requested " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)'))
 	await ctx.send(embed=embed)
 
+
+
+
+
+# Charts an options contract
+@bot.command(name='chart')
+async def chart(ctx, *args):
+    return await c(ctx, *args)
+
+# Alias command
 @bot.command(name='c')
 async def c(ctx, *args):
 	string = ' '.join(args)
-	length, optionInfo = mp.getChartInfo(string)
-	file = discord.File(gc.generateChart(string, optionInfo['contractSymbol'], length))
-	await ctx.message.channel.send("Change in Price (and Volume)", file=file)
+
+	try:
+		await ctx.send("Compiling data....", delete_after=1.0)
+		length, optionInfo = mp.getChartInfo(string)
+		file = discord.File(gc.generateChart(string, optionInfo['contractSymbol'], length))
+		await ctx.message.channel.send("Change in Price (and Volume)", file=file)
+	except:
+		await ctx.send("No data was found. This has two main causes:\n"
+			"Check if the option exists using `!op`. It might just exist. Alternativly, it might be a formatting issue\n"
+			"Otherwise, try adjusting the duration. Note: "
+			"it is **very** unlikely for any contract to have data for more than a month back")
 
 
+
+
+
+
+# Charts a stock
+# Takes a ticker and a duration
+@bot.command(name='chartstock')
+async def chartstock(ctx, ticker, duration):
+    return await cs(ctx, ticker, duration)
+# Alias command
+@bot.command(name='cs')
+async def cs(ctx, ticker, duration):
+
+	# Tries to calculate the length of the chart
+	try:
+		length = mp.getDurationInfo(duration.upper(), maxDur=(365*3))
+		if length < 10:
+			interval = "5m"
+		elif length < 30:
+			interval = "15m"
+		elif length < 100:
+			interval = "60m"
+		else:
+			interval = "1d"
+	except:
+		await ctx.send("Invalid duration format (Format: XY, where X is a number and Y is one of : d, m, y)\neg. 5d, 13d, 3m, 1y")
+	
+	# Tries generating the chart
+	try:
+		await ctx.send("Compiling data....", delete_after=1.0)
+		chart = gc.generateChart(ticker, ticker.upper(), length, interval=interval)
+		file = discord.File(chart)
+		# Sends the chart (if sucessful)
+		await ctx.message.channel.send("Price and Volume Changes", file=file)
+	except:
+		await ctx.send("No data found. Is the ticker spelled correctly?\nThis may happen due to interval lengths - "
+			"the specified interval may be too small (for example, if you call 1D over the weekend, the day would not have"
+			"any trading data). More commonly, the interval might be too large")
+
+# Execute #
 bot.run(TOKEN)
-print("Connected")
