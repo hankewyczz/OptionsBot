@@ -136,7 +136,7 @@ async def ops(ctx, *args):
 async def c(ctx, *args):
 	string = ' '.join(args)
 	length, optionInfo = mp.getChartInfo(string)
-	file = discord.File(gc.generateChart(optionInfo['contractSymbol'], length))
+	file = discord.File(gc.generateChart(string, optionInfo['contractSymbol'], length))
 	await ctx.message.channel.send("Change in Price (and Volume)", file=file)
 
 
