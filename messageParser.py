@@ -20,40 +20,23 @@ parseChainInfo(String string)
 parseChainInfoAtDate(String ticker, int timestamp)
 	Takes a ticker and a timestamp, and gets 5 options above and below the strike price
 
+getOptionInfo(String ticker, datetime date, String optionType, float optionType, string contractSymbol)
+	Given a string, it parses it and returns the corresponding option
 
+getDurationInfo(String time, maxDur int)
+	Takes a string of the duration and converts it into an integer
 
+getChartInfo (String string)
+	given a stirng as input, it splits and parses it using getDurationInfo and getOptionInfo
 
-##################### FIX
-Main methods:
- - getOptionInfo(String)
- 	Returns option info specific to ONE option (mainly used for price checks)
+contractSymbolToInfo(String cSymbol)
+	Given a contract symbol, it parses it into seperate pieces of information
 
- 	Takes in a string formatted as such: "^\$*[a-zA-Z] [0-9]\/*[0-9][[0-9]\/]* \$*[0-9][.[0-9]]*"
- 		In other words, the string is divided into 3 parts:
- 			The ticker, which is case insensitive and may or may not be prefixed with an "$"
- 				(eg. SPY, $SPY, spy, $spy, sPy, etc are all valid)
-			The date and option type, which have no space in between. 
-				The date can be formatted MM/DD (most commonly), or, in case of LEAPS, MM/DD/YYYY
-				The option type can be formatted as a "C" or a "P" (calls and puts, respectivly), and is case insensitive
-				(eg. 4/17c, 4-17C, 04/17/20C, 2020-04-17c, 04/17C are all valid [and equal])
-			The strike price, which may or may not be prefixed by "$", and may or may not have trailing decimals
-				(eg. $105, 105, $105.00, 105.00, 105., 105.0, 105.000, etc. are all valid)
-				Note: the strike price will accept at most 3 decimals (eg. XX.XXX). Any extras will be truncated
+contractSymbolToData (String cSymbol)
+	Converts a contractSymbol to data
 
- - parseChainInfo(String)
- 	Returns ALL options which pass the filter 
-
- 	Takes in a string which can be formatted in one of four ways:
- 		With just the ticker (eg. SPY, $SPY, etc)
-
- 		With the ticker and a date (eg. SPY 4-17, spy 4/17, $spy 2020-04-17)
-
- 		With the ticker and an option type (eg. spy c, SPY C, $SPY c)
-
- 		With the ticker, date, and option type (eg. spy 4/17c, $SPY 4-17C, etc)
-
- - portfolioValue(Array)
- 	Takes an array of contract symbols, and returns the total value, change, and percent change (respectivly)
+portfolioValue (list[String] array)
+	Calculates the total portfolio value and changes
 
 '''
 
@@ -182,12 +165,9 @@ def parseChainInfoAtDate(ticker, timestamp):
 
 
 
-# getOptionInfo(String string)
+# getOptionInfo(String ticker, datetime date, String optionType, float optionType, string contractSymbol)
 # Given a string, it parses it and returns the corresponding option
-
-def getOptionInfo(string):
-	# parses the string
-	ticker, date, optionType, strike, contractSymbol = parseContractInfo(string)
+def getOptionInfo(ticker, date, optionType, strike, contractSymbol):
 	timestamp = int(date.timestamp())
 
 	url = baseURL + ticker + "?date=" + str(timestamp)
@@ -210,56 +190,74 @@ def getOptionInfo(string):
 
 
 
-def getDurationInfo(time, maxDur=60):
-	num = int(time[:-1])
-	mult = {"D": 1, "M": 30, "Y": 365}[time[-1:]]
-	return min(num * mult, maxDur)
+# getDurationInfo(String time, maxDur int)
+# Takes a string of the duration and converts it into an integer
+def getDurationInfo(durationAsStr, maxDur=60):
+	number = int(durationAsStr[:-1]) # gets everything but the character denoting the multiplier
+	multiplier = {"D": 1, "W": 7, "M": 30, "Y": 365}[durationAsStr[-1:]]
+	return min(number * multiplier, maxDur)
 
+
+
+
+
+# getChartInfo (String string)
+# given a stirng as input, it splits and parses it using getDurationInfo and getOptionInfo
 def getChartInfo(string):
 	string = string.upper()
 	time = string.split(" ")[-1]
+
 	if time[-1:].isalpha():
 		num = getDurationInfo(time)
+	else: 
+		num = int(time[-1:])
+	try:
+		contractInfo = string.replace(time, '')
+		optionsInfo = getOptionInfo(parseContractInfo(contractInfo))
+	except:
+		raise ValueError("Couldn't parse the option info")
+		return
 
-	optionsInfo = getOptionInfo(string.replace(time, ''))
 	return num, optionsInfo
 
 
-def contractSymbolToInfo(string):
-	tickerAndDate = string[:-8]
-	ticker = re.match("^[a-zA-Z]+", tickerAndDate).group()
 
-	date = re.sub("[^0-9]", "", tickerAndDate)
 
-	dateSplit = string.split(date)[1]
+# contractSymbolToInfo(String cSymbol)
+# Given a contract symbol, it parses it into seperate pieces of information
+def contractSymbolToInfo(cSymbol):
+	tickerAndDate = cSymbol[:-8] # Last 8 are always reserved for the strike price
+	ticker = re.sub("^[a-zA-Z]", "", tickerAndDate) # removes any non-alpha characters
 
-	strike = dateSplit[1:6] + "." + dateSplit[6:]
+	date = re.sub("[^0-9]", "", tickerAndDate)  # removes any non-numberic
 
-	optionType = dateSplit[0:1]
-	optionType = {"C": "calls", "P": "puts"}[optionType]
+	dateSplit = cSymbol.split(date)[1] # splits the string on the date (ie. returns the strike)
 
-	date = date[2:4] + "/" + date[4:] + "/20" + date[:2]
-	date = parser.parse(date, tzinfos={None: 0})
+	strike = dateSplit[1:6] + "." + dateSplit[6:] # adds the deminal
+ 
+	optionType = {"C": "calls", "P": "puts"}[dateSplit[0:1]] # parses the option type
 
-	
+	date = date[2:4] + "/" + date[4:] + "/20" + date[:2] # Formats the date
+	date = parser.parse(date, tzinfos={None: 0}) # Creates the datetime object
 
 	return ticker, date, optionType, strike
 	
 
-def contractSymbolToData(string):
-	ticker, date, optionType, strike = contractSymbolToInfo(string)
-
-	timestamp = int(date.timestamp())
-
-	url = baseURL + ticker + "?date=" + str(timestamp)
-
-	data = loadFrom(url)['optionChain']['result'][0]['options'][0]
-
-	for option in data[optionType]:
-		if option['contractSymbol'] == string:
-			return option
 
 
+
+# contractSymbolToData (String cSymbol)
+# Converts a contractSymbol to data
+def contractSymbolToData(cSymbol):
+	ticker, date, optionType, strike = contractSymbolToInfo(cSymbol)
+	return getOptionInfo(ticker, date, optionType, strike, cSymbol)
+
+
+
+
+
+# portfolioValue (list[String] array)
+# Calculates the total portfolio value and changes
 def portfolioValue(array):
 	value = 0
 	change = 0
@@ -271,12 +269,6 @@ def portfolioValue(array):
 		percentChange += info['percentChange']
 	return value, change, percentChange
 
-
-
-
-
-#main("aapl 4/17c 105")
-#print(contractSymbolToInfo("AAPL200424C00257500"))
 
 
 

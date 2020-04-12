@@ -78,7 +78,7 @@ async def alias_command(self, player, message):
 @bot.command(name='op')
 async def op(ctx, *args):
 	string = ' '.join(args)
-	optionInfo = mp.getOptionInfo(string)
+	optionInfo = mp.getOptionInfo(mp.parseContractInfo(string))
 
 	t, d, o, s, st = mp.parseContractInfo(string)
 	cleanOp = "$" + str(t) + " " + d.strftime('%m/%d') + o + " $" + s
@@ -169,7 +169,7 @@ async def ops(ctx, *args):
 			return
 
 		for i in range(0, len(calls)-1):
-			
+
 			# Formats the information displayed for each option
 			strike = "Strike: {}".format(calls[i]['strike'])
 
