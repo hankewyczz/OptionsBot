@@ -31,7 +31,7 @@ async def help(ctx):
 
 	misc = ("`!ping` : Responds 'pong'\n\n`!steven` : Checks if Steven is a simp")
 	
-	options = ("`!op <TICKER> <DATE><TYPE> <STRIKE>` : Returns information about a specific option. The string formatting is pretty loose "
+	options = ("`!op <TICKER> <DATE><TYPE> <STRIKE>`\n`(alias: !option)` : Returns information about a specific option. The string formatting is pretty loose "
 	 "(aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p $400.50`, `!op T 1/18/22C 2010.50`\n\n"
 	 "`!ops <TICKER> <DATE>**`\n`(alias: !optionchain, !opc)` : Returns information about an options chain. Calling `!ops <TICKER>` will return a list of availible dates, " 
 	 "and calling `!ops <TICKER> <DATE>` will return more specific information\n\n")
@@ -48,21 +48,33 @@ async def help(ctx):
 	await ctx.send(embed=embed)
 
 
+# Steven
 @bot.command(name='steven')
 async def steven(ctx):
     await ctx.send("is a simp")
 
+
+
+# ping
 @bot.command(name='ping')
 async def ping(ctx):
     await ctx.send("pong", delete_after=1)
     await ctx.message.delete()
 
+
+
+# Echo (don't tell steven)
 @bot.command(name='ekho')
 async def ekho(ctx, *args):
 	msg = ' '.join(args)
 	await ctx.send(msg)
 	await ctx.message.delete()
 
+
+
+
+
+# Purges a given number of messages
 @bot.command(name='purge')
 async def purge(ctx, number):
     await ctx.message.channel.purge(limit=int(number)+1)
@@ -71,16 +83,25 @@ async def purge(ctx, number):
 
 
 
-'''
-async def alias_command(self, player, message):
-    return await self.real_command(player, message)'''
+# Returns information about a specific option
+# Takes a ticker, date, type, and strike
+@bot.command(name='option')
+async def option(ctx, *args):
+    return await op(ctx, *args)
 
+# alias command
 @bot.command(name='op')
 async def op(ctx, *args):
 	string = ' '.join(args)
-	optionInfo = mp.getOptionInfo(mp.parseContractInfo(string))
 
-	t, d, o, s, st = mp.parseContractInfo(string)
+	try:
+		t, d, o, s, st = mp.parseContractInfo(string)
+		optionInfo = mp.getOptionInfo(t, d, o, s, st)
+	except:
+		await ctx.send("String could not be parsed. Please check your formatting (`!help`) for more info")
+		return
+
+	# Cleans up the title string
 	cleanOp = "$" + str(t) + " " + d.strftime('%m/%d') + o + " $" + s
 
 	change = round(optionInfo['change'], 2)
@@ -95,19 +116,14 @@ async def op(ctx, *args):
 	embed = discord.Embed(title=cleanOp, description=optionInfo['contractSymbol'], color=color)
 	embed.add_field(name="Last Price", value="$" + str(round(optionInfo['lastPrice'], 2)))
 	embed.add_field(name="Change", value=change)
-	pChange = round(optionInfo['percentChange'], 2)
-	if pChange < 0:
-		pChange = str(pChange) + "%"
-	else:
-		pChange = "+" + str(pChange) + "%"
-	embed.add_field(name="% Change", value=pChange)
+	embed.add_field(name="% Change", value=round(optionInfo['percentChange'], 2))
 	embed.add_field(name="IV", value=round(optionInfo['impliedVolatility'], 2))
 	embed.add_field(name="Volume", value=optionInfo['volume'])
 	embed.add_field(name="OI", value=round(optionInfo['openInterest'], 2))
 	embed.add_field(name="Bid / Ask", value="$" + str(round(optionInfo['bid'], 2)) + " / $" + str(round(optionInfo['ask'], 2)))
 	embed.add_field(name="B/A Spread", value="$" + str(round(round(optionInfo['ask'], 2) - round(optionInfo['bid'], 2), 2)))
-	embed.set_footer(text="Data requested at " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)') + "\nData may not be accurate as of the time requested due to API delay")
 
+	embed.set_footer(text="Data requested at " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)') + "\nData may not be accurate as of the time requested due to API delay")
 
 	await ctx.send(embed=embed)
 
