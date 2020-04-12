@@ -19,13 +19,16 @@ where `DISCORD_TOKEN` is your discord bot token, and `BOT_ADMIN` is the user ID 
 ## Usage
 `!ping` : Responds 'pong'
 
-`!op <TICKER> <DATE><TYPE> <STRIKE>`\n`(alias: !option)` : Returns information about a specific option. The string formatting is pretty loose (aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p $400.50`, `!op T 1/18/22C 2010.50`
+`!op <TICKER> <DATE><TYPE> <STRIKE>`
+`(alias: !option)` : Returns information about a specific option. The string formatting is pretty loose (aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p $400.50`, `!op T 1/18/22C 2010.50`
 
-`!ops <TICKER> <DATE>**`\n`(alias: !optionchain, !opc)` : Returns information about an options chain. Calling `!ops <TICKER>` will return a list of availible dates, and calling `!ops <TICKER> <DATE>` will return more specific information
+`!ops <TICKER> <DATE>**`
+`(alias: !optionchain, !opc)` : Returns information about an options chain. Calling `!ops <TICKER>` will return a list of availible dates, and calling `!ops <TICKER> <DATE>` will return more specific information
 
 `!c <TICKER> <DATE><TYPE> <STRIKE> <DURATION>` : Returns a chart of the price and volume of an option. The formatting is identical to `!op`, with the addition of a <DURATION> field. This takes a numberical value and date type (valid options are 'd', 'm', 'y'). **NOTE**: it is unlikely that data will be availible for the option more than a month back.
 
-`!chartstock <STOCK_TICKER> <DURATION>`\n`(alias: !cs)` : Returns a chart of the price and volume of a STOCK
+`!chartstock <STOCK_TICKER> <DURATION>`
+`(alias: !cs)` : Returns a chart of the price and volume of a STOCK
 
 `!buy (<TICKER> OR <TICKER> <DATE><TYPE> <STRIKE>) <N>` : Buys *N* contracts/shares of the given option or stock
 
