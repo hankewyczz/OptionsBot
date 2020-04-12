@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 # From project
 import messageParser as mp
 import generateChart as gc
+from pyson import pyson
 # General
 import os
 from datetime import datetime
@@ -13,6 +14,9 @@ import json
 # Loads the env file (contains the token)
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+BOT_ADMIN_ID = os.getenv('BOT_ADMIN')
+
+
 
 
 # Initializes with command prefix
@@ -24,12 +28,23 @@ bot.remove_command('help') # Removes the default help command
 async def on_ready():
 	await bot.change_presence(activity=discord.Game(name='!help'))
 
+
+
+
+
+## Checks if the user sending the message is an approved member
+def is_approved(ctx):
+	return str(BOT_ADMIN_ID) == str(ctx.message.author.id)
+
+
+
+
 # New help command
 @bot.command(name='help')
 async def help(ctx):
 	embed = discord.Embed(title="OptionsBot Help", description="Commands and descriptions", color=0x0000ff)
 
-	misc = ("`!ping` : Responds 'pong'\n\n`!steven` : Checks if Steven is a simp")
+	misc = ("`!ping` : Responds 'pong'\n\n`!steven` : Checks if Steven is a simp\n\n")
 	
 	options = ("`!op <TICKER> <DATE><TYPE> <STRIKE>`\n`(alias: !option)` : Returns information about a specific option. The string formatting is pretty loose "
 	 "(aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p $400.50`, `!op T 1/18/22C 2010.50`\n\n"
@@ -40,32 +55,41 @@ async def help(ctx):
 		"The formatting is identical to `!op`, with the addition of a <DURATION> field. This takes a numberical value and date type "
 		"(valid options are 'd', 'm', 'y'). **NOTE**: it is unlikely that data will be availible for the option "
 		"more than a month back.\n\n`!chartstock <STOCK_TICKER> <DURATION>`\n`(alias: !cs)` : Returns a chart of the price "
-		"and volume of a STOCK")
+		"and volume of a STOCK\n\n")
+
+	trading = ("`!buy (<TICKER> OR <TICKER> <DATE><TYPE> <STRIKE>) <N>` : Buys *N* contracts/shares of the given option or stock\n\n"
+		"`!portfolio` :  Returns the value of your portfolio (broken down into categories)\n\n"
+		"`!leaderboard` : Returns everyone's standings on the leaderboard")
 
 	embed.add_field(name="Misc", value=misc, inline=False)
 	embed.add_field(name="Options", value=options, inline=False)
 	embed.add_field(name="Charting", value=charting, inline=False)
+	embed.add_field(name="Trading", value=trading, inline=False)
 	await ctx.send(embed=embed)
+
+
+
 
 
 # Steven
 @bot.command(name='steven')
 async def steven(ctx):
-    await ctx.send("is a simp")
+	await ctx.send("is a simp")
 
 
 
 # ping
 @bot.command(name='ping')
 async def ping(ctx):
-    await ctx.send("pong", delete_after=1)
-    await ctx.message.delete()
+	await ctx.send("pong", delete_after=1)
+	await ctx.message.delete()
 
 
 
 # Echo (don't tell steven)
-@bot.command(name='ekho')
-async def ekho(ctx, *args):
+@bot.command(name='echo')
+@commands.check(is_approved)
+async def echo(ctx, *args):
 	msg = ' '.join(args)
 	await ctx.send(msg)
 	await ctx.message.delete()
@@ -77,7 +101,7 @@ async def ekho(ctx, *args):
 # Purges a given number of messages
 @bot.command(name='purge')
 async def purge(ctx, number):
-    await ctx.message.channel.purge(limit=int(number)+1)
+	await ctx.message.channel.purge(limit=int(number)+1)
 
 
 
@@ -85,12 +109,7 @@ async def purge(ctx, number):
 
 # Returns information about a specific option
 # Takes a ticker, date, type, and strike
-@bot.command(name='option')
-async def option(ctx, *args):
-    return await op(ctx, *args)
-
-# alias command
-@bot.command(name='op')
+@bot.command(aliases=['option'])
 async def op(ctx, *args):
 	string = ' '.join(args)
 
@@ -133,17 +152,7 @@ async def op(ctx, *args):
 
 # Returns an option chain
 # Takes a ticker and (optionally) a date
-@bot.command(name='optionchain')
-async def optionchain(ctx, *args):
-    return await ops(ctx, *args)
-
-# Alias command
-@bot.command(name='opc')
-async def opc(ctx, *args):
-    return await ops(ctx, *args)
-
-# Alias command
-@bot.command(name='ops')
+@bot.command(aliases=["opc", "optionchain"])
 async def ops(ctx, *args):
 	string = ' '.join(args)
 
@@ -208,12 +217,7 @@ async def ops(ctx, *args):
 
 
 # Charts an options contract
-@bot.command(name='chart')
-async def chart(ctx, *args):
-    return await c(ctx, *args)
-
-# Alias command
-@bot.command(name='c')
+@bot.command(aliases=['chart'])
 async def c(ctx, *args):
 	string = ' '.join(args)
 
@@ -235,11 +239,7 @@ async def c(ctx, *args):
 
 # Charts a stock
 # Takes a ticker and a duration
-@bot.command(name='chartstock')
-async def chartstock(ctx, ticker, duration):
-    return await cs(ctx, ticker, duration)
-# Alias command
-@bot.command(name='cs')
+@bot.command(aliases=['chartstock'])
 async def cs(ctx, ticker, duration):
 
 	# Tries to calculate the length of the chart
@@ -267,6 +267,164 @@ async def cs(ctx, ticker, duration):
 		await ctx.send("No data found. Is the ticker spelled correctly?\nThis may happen due to interval lengths - "
 			"the specified interval may be too small (for example, if you call 1D over the weekend, the day would not have"
 			"any trading data). More commonly, the interval might be too large")
+
+		currency.data[ID]
+
+
+
+#############
+## ECONOMY ##
+#############
+
+currency=pyson('currency')
+if 'name' not in currency.data:
+	currency.data['name']='USD'
+
+
+
+
+# Initializes a person's portfolio
+def check_id(ID):
+	ID = str(ID)
+	if ID not in currency.data:
+		currency.data[ID] = {}
+		currency.data[ID]['currency'] = 0
+		currency.data[ID]['symbols'] = []
+		currency.data[ID]['stocks'] = []
+		currency.save() 
+
+
+
+# Admin use only:
+# Adds a given number of dollars to a user's account
+@commands.check(is_approved)
+@bot.command(pass_context=True)
+async def add(ctx,amount:int=0,member:discord.Member=None):
+	ID = str(member.id)
+	check_id(ID)
+	currency.data[ID]['currency'] += amount
+	currency.save()
+	await ctx.send("The Fed just gave {1} another ${0} bailout".format(amount, member.mention))
+
+
+
+
+# Admin use only:
+# Remives a given number of points from a member's stash
+@commands.check(is_approved)
+@bot.command(pass_context=True)
+async def remove(ctx,amount:int=0,member:discord.Member=None):
+	''': Remove points/currency from a member's stash'''
+	ID = str(member.id)
+	check_id(ID)
+	currency.data[ID]['currency'] = max(currency.data[ID]['currency'] - amount, 0)
+	currency.save()
+	await ctx.send("{0} just lost ${1} on OTM SPY puts".format(member.mention, amount))
+
+
+
+
+
+# Checks your portfolio value
+@bot.command(pass_context=True)
+async def portfolio(ctx):
+	ID = str(ctx.message.author.id)
+	check_id(ID)
+
+	optionValue, change, percentChange = mp.optionsPortfolioValue(currency.data[ID]['symbols'])
+	stockValue, stockChange, stockPercentChange = mp.stocksPortfolioValue(currency.data[ID]['stocks'])
+
+	totalValue = round(optionValue + stockValue + currency.data[ID]['currency'], 2)
+	totalChange = round(change + stockChange, 2)
+	totalPercentChange = round(percentChange + stockPercentChange, 2)
+
+	await ctx.send(("your broke ass only has ${0} (Change: ${1} / {2}%)\n"
+		"Investing power: ${3}\nOptions: ${4}\n"
+		"Stocks: ${5}").format(totalValue, totalChange, totalPercentChange, currency.data[ID]['currency'], optionValue, stockValue))
+	if str(ctx.message.author.id) == "160507791059058688":
+		await ctx.send("Steven?: true\nSimp?: true\nHotel?: Trivago")
+
+
+
+
+
+# Views the server leaderboard
+@bot.command(aliases=['leaderboards'])
+async def leaderboard(ctx):
+
+	members = []
+	for ID, assets in currency.data.items():
+		if ID != 'name':
+			optionValue, change, percentChange = mp.optionsPortfolioValue(assets['symbols'])
+			totalValue = optionValue + assets['currency']
+			members.append((ID, totalValue))
+
+	if len(members) == 0:
+		await bot.say('Leaderboard is empty')
+		return
+
+	ordered = sorted(members,key=lambda x:x[1] ,reverse=True )
+	players = ''
+	assets = ''
+
+	for ID, playerAssets in ordered:
+		player = '<@{}>'.format(ID)
+        #await client.send_message(message.channel, ' : %s is the best ' % myid) #discord.utils.get(bot.get_all_members(), id=ID)
+		players += player + '\n'
+		assets += "${}".format(playerAssets) + '\n'
+
+	embed = discord.Embed(title='Leaderboard')
+	embed.add_field(name='Player', value=players)
+	embed.add_field(name='Assets', value=assets)
+	await ctx.send(embed=embed)
+
+
+
+# Buys the given amount of the given stock/contract
+@bot.command(pass_context=True)
+async def buy(ctx, *args):
+	contractArgs = args[:-1]
+	ID = str(ctx.message.author.id)
+	check_id(ID)
+	currentLiquid = currency.data[ID]['currency']
+	
+	try:
+		numberOfContracts = int(args[-1])
+
+		if len(contractArgs) == 1: # this is a stock
+			info = mp.getStockInfo(contractArgs[0])
+			price = info['postMarketPrice']
+
+			if currentLiquid > price:
+				currency.data[ID]['stocks'].append([info['symbol'], numberOfContracts])
+			else:
+				await ctx.send("broke ass (you need ${0} to buy this)".format(price))
+				return
+
+
+		elif len(contractArgs) == 3: # this is an option
+			t, d, o, s, st = mp.parseContractInfo(' '.join(contractArgs))
+			price = mp.getOptionInfo(t, d, o, s, st)['lastPrice']
+
+			if currentLiquid > price:
+				currency.data[ID]['symbols'].append([st, numberOfContracts])
+			else:
+				await ctx.send("broke ass (you need ${0} to buy this)".format(price))
+				return
+
+		else:
+			await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
+			return
+	except:
+		await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
+		raise ValueError("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
+		return
+
+
+	currency.data[ID]['currency'] -= price
+	currency.save()
+	await ctx.send("Purchase sucessful")
+
 
 # Execute #
 bot.run(TOKEN)

@@ -35,7 +35,7 @@ contractSymbolToInfo(String cSymbol)
 contractSymbolToData (String cSymbol)
 	Converts a contractSymbol to data
 
-portfolioValue (list[String] array)
+optionsPortfolioValue (list[String] array)
 	Calculates the total portfolio value and changes
 
 '''
@@ -190,6 +190,17 @@ def getOptionInfo(ticker, date, optionType, strike, contractSymbol):
 
 
 
+# getStockInfo(String ticker)
+# Given a string, it parses it and returns the corresponding stock
+def getStockInfo(ticker):
+	url = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + ticker
+	return loadFrom(url)['quoteResponse']['result'][0]
+
+
+
+
+
+
 # getDurationInfo(String time, maxDur int)
 # Takes a string of the duration and converts it into an integer
 def getDurationInfo(durationAsStr, maxDur=60):
@@ -227,7 +238,7 @@ def getChartInfo(string):
 # Given a contract symbol, it parses it into seperate pieces of information
 def contractSymbolToInfo(cSymbol):
 	tickerAndDate = cSymbol[:-8] # Last 8 are always reserved for the strike price
-	ticker = re.sub("^[a-zA-Z]", "", tickerAndDate) # removes any non-alpha characters
+	ticker = re.sub("[^a-zA-Z]", "", tickerAndDate[:-1]) # removes any non-alpha characters
 
 	date = re.sub("[^0-9]", "", tickerAndDate)  # removes any non-numberic
 
@@ -235,7 +246,7 @@ def contractSymbolToInfo(cSymbol):
 
 	strike = dateSplit[1:6] + "." + dateSplit[6:] # adds the deminal
  
-	optionType = {"C": "calls", "P": "puts"}[dateSplit[0:1]] # parses the option type
+	optionType = dateSplit[0:1] # parses the option type
 
 	date = date[2:4] + "/" + date[4:] + "/20" + date[:2] # Formats the date
 	date = parser.parse(date, tzinfos={None: 0}) # Creates the datetime object
@@ -256,18 +267,44 @@ def contractSymbolToData(cSymbol):
 
 
 
-# portfolioValue (list[String] array)
+# optionsPortfolioValue (list[String] array)
 # Calculates the total portfolio value and changes
-def portfolioValue(array):
+def optionsPortfolioValue(array):
 	value = 0
 	change = 0
 	percentChange = 0
-	for symbol in array:
-		info = contractSymbolToData(symbol)
-		value += info['lastPrice'] * 100
-		change += info['change'] * 100
+	for symbolGroup in array:
+		try:
+			info = contractSymbolToData(symbolGroup[0])
+		except:
+			raise ValueError("Couldn't parse the contract symbols")
+
+		value += info['lastPrice'] * 100 * symbolGroup[1]
+		change += info['change'] * 100 * symbolGroup[1]
 		percentChange += info['percentChange']
-	return value, change, percentChange
+	return round(value, 2), round(change, 2), round(percentChange, 2)
+
+
+
+
+
+# stocksPortfolioValue (list[String] array)
+# Calculates the total portfolio value and changes
+def stocksPortfolioValue(array):
+	value = 0
+	change = 0
+	percentChange = 0
+	for stockGroup in array:
+		try:
+			info = getStockInfo(stockGroup[0])
+		except:
+			raise ValueError("Couldn't parse the ticker")
+
+		value += info['postMarketPrice'] * stockGroup[1]
+		change += info['postMarketChange'] *  stockGroup[1]
+		percentChange += info['postMarketChangePercent']
+
+	return round(value, 2), round(change, 2), round(percentChange, 2)
 
 
 
