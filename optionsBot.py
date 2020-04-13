@@ -2,6 +2,7 @@
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+import asyncio
 # From project
 import messageParser as mp
 import generateChart as gc
@@ -21,6 +22,7 @@ BOT_ADMIN_ID = os.getenv('BOT_ADMIN')
 
 # Initializes with command prefix
 bot = commands.Bot(command_prefix='!')
+client = discord.Client()
 bot.remove_command('help') # Removes the default help command
 
 # Changes the bot presence state
@@ -35,6 +37,56 @@ async def on_ready():
 ## Checks if the user sending the message is an approved member
 def is_approved(ctx):
 	return str(BOT_ADMIN_ID) == str(ctx.message.author.id)
+
+
+
+
+
+# For putting someone in timeout
+MOVE_BACK = False
+MEMBER_TO_MOVE = None
+TIMEOUT_CHANNEL = 695486305286488080
+
+@bot.command(name='timeout')
+@commands.check(is_approved)
+async def timeout(ctx, member:discord.Member=None):
+	guild = ctx.message.guild
+	channel = guild.get_channel(TIMEOUT_CHANNEL)
+	try:
+		await member.move_to(channel)
+		global MOVE_BACK
+		global MEMBER_TO_MOVE 
+		MOVE_BACK = True
+		MEMBER_TO_MOVE = member
+	except:
+		print("User not in voice")
+
+
+
+## If they try leaving, move them back
+@bot.event
+async def on_voice_state_update(member, before, after):
+	if MOVE_BACK == True:
+		if member == MEMBER_TO_MOVE:
+			if after.channel.id != TIMEOUT_CHANNEL and after.channel.id != None:
+				guild = member.guild
+				channel = guild.get_channel(TIMEOUT_CHANNEL)
+				await member.move_to(channel)
+
+
+
+## Ends the timeout
+@bot.command(name='endtimeout')
+@commands.check(is_approved)
+async def endtimeout(ctx):
+	global MOVE_BACK
+	global MEMBER_TO_MOVE
+	MOVE_BACK = False
+	MEMBER_TO_MOVE = None
+
+
+
+
 
 
 
@@ -428,3 +480,4 @@ async def buy(ctx, *args):
 
 # Execute #
 bot.run(TOKEN)
+client.run(TOKEN)
