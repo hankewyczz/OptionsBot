@@ -146,29 +146,19 @@ class Chart:
 
 
 	# (list[int] x, list[float] y, list[int] vol, String title, int length)
-	# Takes lists of x, y, and volume data, and draws a graph
-	def drawGraph(self, x, y, vol, length):
+	# Takes lists of x, y and draws a graph
+	def drawGraph(self, x, y):
 		# Converts the timestamps in x into date objects
 		dates = [datetime.fromtimestamp(date) for date in x]
 
 		# Initializes
 		fig, ax1 = self.generateAxes(x, y)
 
-		# Initializes axes2 with identical xAxis
-		ax2 = self.tickFormatter(length, ax1.twinx())
-		ax2.set_ylim(ymin = 0, ymax = max(vol) * 2) # So volume occupies the bottom half of the graph
-		
-
-		# Plots the volume
-		ax2.plot(dates, vol, "#B2DCCB")
-		l2 = ax2.fill_between(dates, vol, facecolor="#B2DCCB")
-
 		# Plots the prices
 		ax1.plot(dates, y, "#00A95D")
 		l1 = ax1.fill_between(dates, y, facecolor="#00A95D")
 
-		plt.legend([l1, l2], ["Price", "Volume"]) # Legend for both
-		return fig, ax1, ax2
+		return fig, ax1, l1
 
 	# (String string, String symbol, int length)
 	# Takes the given string, the contract symbol, and the length of data to be viewed
@@ -177,13 +167,22 @@ class Chart:
 		cleanTitle = string.upper()
 		cleanTitle = cleanTitle.replace("$", "\$")
 
-		fig, ax1, ax2 = self.drawGraph(time, price, volume, length)
+		fig, ax1, l1 = self.drawGraph(time, price)
 
+		# Initializes axes2 with identical xAxis
+		ax2 = self.tickFormatter(length, ax1.twinx())
+		ax2.set_ylim(ymin = 0, ymax = max(volume) * 2) # So volume occupies the bottom half of the graph
+		
+		# Plots the volume
+		dates = [datetime.fromtimestamp(date) for date in time]
+		ax2.plot(dates, volume, "#B2DCCB")
+		l2 = ax2.fill_between(dates, volume, facecolor="#B2DCCB")
+
+		
 		# Meta
 		plt.title(cleanTitle)
-		
 		name = "charts/" + symbol + '.png'
 		plt.savefig(name)
+		plt.legend([l1, l2], ["Price", "Volume"]) # Legend for both
 
 		self.name = name
-

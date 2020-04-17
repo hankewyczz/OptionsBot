@@ -480,12 +480,18 @@ async def validPurchase(currentLiquid, price):
 
 # buySymbol(data, list contractArgs, int numberOfContracts)
 # buys the given symbol
-async def buySymbol(data, contractArgs, numberOfContracts):
+async def buySymbol(data, *args):
+	args = list(args)
+	try:
+		contractArgs, numberOfContracts = args[:-1][0], args[-1]
+	except:
+		raise ValueError("Input improperly formatted")
+
 	currentLiquid = data['currency']
 
 	if len(contractArgs) == 1: # this is a stock
 		info = ou.getStockInfo(contractArgs[0])
-		symbol, price = info['symbol'], info['postMarketPrice']
+		symbol, price = info['symbol'], info['regularMarketPrice']
 
 		if validPurchase(currentLiquid, price):
 			data['stocks'].append([symbol, numberOfContracts])
@@ -508,12 +514,13 @@ async def buySymbol(data, contractArgs, numberOfContracts):
 # Buys the given amount of the given stock/contract
 @bot.command(pass_context=True)
 async def buy(ctx, *args):
-	contractArgs = args[:-1]
+	contractArgs = list(args)[:-1]
 	ID = str(ctx.message.author.id)
 	check_id(ID)
 	
 	try:
-		currency.data[ID] = buySymbol(currency.data[ID], contractArgs, int(args[-1]))
+		data = await buySymbol(currency.data[ID], contractArgs, int(args[-1]))
+		currency.data[ID] = data
 	except:
 		await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
 		raise ValueError("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")

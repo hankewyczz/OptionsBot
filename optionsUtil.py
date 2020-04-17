@@ -192,3 +192,5 @@ def printChain(ticker, timestamp):
 		values.append(value)
 		strikes.append("Strike: {}".format(calls[i]['strike']))
 	return values, strikes
+
+
