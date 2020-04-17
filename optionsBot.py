@@ -6,6 +6,7 @@ import asyncio
 # From project
 import messageParser as mp
 import generateChart as gc
+import optionsUtil as ou
 from pyson import pyson
 # General
 import os
@@ -44,45 +45,81 @@ def is_approved(ctx):
 
 # For putting someone in timeout
 MOVE_BACK = False
-MEMBER_TO_MOVE = None
-TIMEOUT_CHANNEL = 695486305286488080
+MEMBER_TO_MOVE = []
+TIMEOUT_CHANNEL = int(os.getenv("TIMEOUT_CHANNEL"))
+UNSIMPABLE = [str(BOT_ADMIN_ID), "201503408652419073", "285480424904327179"]
 
-@bot.command(name='timeout')
-@commands.check(is_approved)
-async def timeout(ctx, member:discord.Member=None):
+
+
+@bot.command(name='simp')
+async def simp(ctx, member:discord.Member=None):
 	guild = ctx.message.guild
+	global TIMEOUT_CHANNEL
+
+	print(member.id)
+	if str(member.id) in UNSIMPABLE:
+		return
+
 	channel = guild.get_channel(TIMEOUT_CHANNEL)
+
+	if channel == None:
+		await guild.create_voice_channel(name="Steven's Simp Spot")
+
+		for c in guild.voice_channels:
+		    if c.name == "Steven's Simp Spot":
+		        channel = c
+		        TIMEOUT_CHANNEL = c.id
+		        os.environ['TIMEOUT_CHANNEL'] = str(TIMEOUT_CHANNEL)
+
+
 	try:
 		await member.move_to(channel)
 		global MOVE_BACK
 		global MEMBER_TO_MOVE 
 		MOVE_BACK = True
-		MEMBER_TO_MOVE = member
+		MEMBER_TO_MOVE.append(member)
 	except:
-		print("User not in voice")
+		raise ValueExveption("Ssdfs")
+		await ctx.send("that simp {} isn't in a voice channel".format(member))
 
 
 
 ## If they try leaving, move them back
 @bot.event
 async def on_voice_state_update(member, before, after):
+	global TIMEOUT_CHANNEL
+
 	if MOVE_BACK == True:
-		if member == MEMBER_TO_MOVE:
-			if after.channel.id != TIMEOUT_CHANNEL and after.channel.id != None:
-				guild = member.guild
-				channel = guild.get_channel(TIMEOUT_CHANNEL)
-				await member.move_to(channel)
+		if member in MEMBER_TO_MOVE:
+			if after.channel != None:
+				if after.channel.id != TIMEOUT_CHANNEL:
+					guild = member.guild
+					channel = guild.get_channel(TIMEOUT_CHANNEL)
+					if channel == None:
+						await guild.create_voice_channel(name="Steven's Simp Spot")
+
+						for c in guild.voice_channels:
+						    if c.name == "Steven's Simp Spot":
+						        channel = c
+						        TIMEOUT_CHANNEL = c.id
+					await member.move_to(channel)
+		else:
+			if after.channel != None:
+				if after.channel.id == TIMEOUT_CHANNEL:
+					await member.move_to(before.channel)
+
+
 
 
 
 ## Ends the timeout
 @bot.command(name='endtimeout')
-@commands.check(is_approved)
-async def endtimeout(ctx):
+async def endtimeout(ctx, member:discord.Member=None):
 	global MOVE_BACK
 	global MEMBER_TO_MOVE
-	MOVE_BACK = False
-	MEMBER_TO_MOVE = None
+	if str(member.id) not in MEMBER_TO_MOVE:
+		MOVE_BACK = False
+		MEMBER_TO_MOVE.remove(member)
 
 
 
@@ -219,7 +256,7 @@ async def ops(ctx, *args):
 	embed = discord.Embed(title=string.upper(), description=("When a date is specified, 5 options above/below "
 		"the current price will be returned\nFormat: `Strike Price`\nCall Option\nPut Option"), color=0x0000ff)
 
-	# Makes the URL	
+	# Makes the URL
 	url = mp.baseURL + ticker
 
 	# If we're not given a date:
@@ -263,9 +300,6 @@ async def ops(ctx, *args):
 
 	embed.set_footer(text="Data requested " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)'))
 	await ctx.send(embed=embed)
-
-
-
 
 
 # Charts an options contract
@@ -384,7 +418,7 @@ async def portfolio(ctx):
 	check_id(ID)
 
 	optionValue, change, percentChange = mp.optionsPortfolioValue(currency.data[ID]['symbols'])
-	stockValue, stockChange, stockPercentChange = mp.stocksPortfolioValue(currency.data[ID]['stocks'])
+	stockValue, stockChange, stockPercentChange = ou.stocksPortfolioValue(currency.data[ID]['stocks'])
 
 	totalValue = round(optionValue + stockValue + currency.data[ID]['currency'], 2)
 	totalChange = round(change + stockChange, 2)

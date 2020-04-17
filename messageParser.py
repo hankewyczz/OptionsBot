@@ -6,6 +6,8 @@ import json
 import re
 import unittest
 
+import stringFormat as sf
+
 '''
 ##############
 ## OVERVIEW ##
@@ -57,45 +59,21 @@ def loadFrom(url):
 # parseContractInfo(String string)
 # Parses the given string into the relevant terms
 def parseContractInfo(string):
-	string = string.upper() # Standardizes the string
-	split = string.split() # Splits it on all spaces
+	split = string.upper().split() # Standardizes and splits the string
 
-	if len(split) == 3:
-		ticker = split[0]
-		dateAndType = split[1]
-		strike = split[2]
+	if len(split) == 3: # Check for validity
+		ticker, dateAndType, strike = split
 	else:
 		raise ValueError('String is not properly formatted')
 
-	# Strips the ticker of any other characters (should only be $)
+	# Cleans the ticker, date, optionType, and strike
 	ticker = re.sub('[^a-zA-Z]', '', ticker)
+	date = parser.parse(dateAndType[:-1], tzinfos={None: 0})
+	dateAsString = date.strftime('%y%m%d') 
 
-	#gets the date, and the option type
-	date = dateAndType[:-1]
-	date = parser.parse(date, tzinfos={None: 0})
-	dateAsString = date.strftime('%y%m%d')
-
-	# Gets the option type
 	optionType = dateAndType[-1:]
-
-	#gets the bare stock price
 	strike = re.sub('[^0-9.]', '', strike)
-
-	# Formats the decimals of the stock price
-	if "." in strike:
-		length = len(strike.split(".")[1])
-		if length > 3:
-			strike += "." + length[:3] # Truncates it
-		else:
-			for i in range(length, 3):
-				strike += "0"
-	else:
-		strike += ".000"
-
-	# Gets the stock price as a string
-	strikeAsString = re.sub('[^0-9]', '', strike)
-	for i in range(len(strikeAsString), 8):
-		strikeAsString = "0" + strikeAsString # Adds leading 0s to fill the string
+	strike, strikeAsString = sf.formatStrike(strike)
 
 	# Concatenates the strings to form the contract symbol
 	contractSymbol = "{0}{1}{2}{3}".format(ticker, dateAsString, optionType, strikeAsString)
@@ -105,7 +83,7 @@ def parseContractInfo(string):
 
 
 
-
+	
 
 # parseChainInfo(String string)
 # Given an option chain request, this returns the parsed ticker and date (if exists)
@@ -267,44 +245,7 @@ def contractSymbolToData(cSymbol):
 
 
 
-# optionsPortfolioValue (list[String] array)
-# Calculates the total portfolio value and changes
-def optionsPortfolioValue(array):
-	value = 0
-	change = 0
-	percentChange = 0
-	for symbolGroup in array:
-		try:
-			info = contractSymbolToData(symbolGroup[0])
-		except:
-			raise ValueError("Couldn't parse the contract symbols")
 
-		value += info['lastPrice'] * 100 * symbolGroup[1]
-		change += info['change'] * 100 * symbolGroup[1]
-		percentChange += info['percentChange']
-	return round(value, 2), round(change, 2), round(percentChange, 2)
-
-
-
-
-
-# stocksPortfolioValue (list[String] array)
-# Calculates the total portfolio value and changes
-def stocksPortfolioValue(array):
-	value = 0
-	change = 0
-	percentChange = 0
-	for stockGroup in array:
-		try:
-			info = getStockInfo(stockGroup[0])
-		except:
-			raise ValueError("Couldn't parse the ticker")
-
-		value += info['postMarketPrice'] * stockGroup[1]
-		change += info['postMarketChange'] *  stockGroup[1]
-		percentChange += info['postMarketChangePercent']
-
-	return round(value, 2), round(change, 2), round(percentChange, 2)
 
 
 
