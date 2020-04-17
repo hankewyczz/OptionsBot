@@ -441,51 +441,58 @@ async def leaderboard(ctx):
 
 
 
+
+# validPurchase (float currentLiquid, float price)
+# Checks if this is a valid purchase
+def validPurchase(currentLiquid, price):
+	if currentLiquid > price:
+		return True
+	else:
+		await ctx.send("broke ass (you need ${0} to buy this)".format(price))
+		return
+
+# buySymbol(data, list contractArgs, int numberOfContracts)
+
+def buySymbol(data, contractArgs, numberOfContracts):
+	currentLiquid = data['currency']
+
+	if len(contractArgs) == 1: # this is a stock
+		info = ou.getStockInfo(contractArgs[0])
+		symbol, price = info['symbol'], info['postMarketPrice']
+
+		if validPurchase(currentLiquid, price):
+			data['stocks'].append([symbol, numberOfContracts])
+
+	elif len(contractArgs) == 3: # this is an option
+		t, d, o, s, symbol = mp.parseContractInfo(' '.join(contractArgs))
+		price = ou.getOptionInfo(t, d, o, s, st)['lastPrice']
+
+		if validPurchase(currentLiquid, price):
+			data['symbols'].append([symbol, numberOfContracts])
+
+	else:
+		await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
+		return
+
+	data['currency'] -= price
+	return data
+
+
 # Buys the given amount of the given stock/contract
 @bot.command(pass_context=True)
 async def buy(ctx, *args):
 	contractArgs = args[:-1]
 	ID = str(ctx.message.author.id)
 	check_id(ID)
-	currentLiquid = currency.data[ID]['currency']
 	
 	try:
-		numberOfContracts = int(args[-1])
-
-		if len(contractArgs) == 1: # this is a stock
-			info = ou.getStockInfo(contractArgs[0])
-			price = info['postMarketPrice']
-
-			if currentLiquid > price:
-				currency.data[ID]['stocks'].append([info['symbol'], numberOfContracts])
-			else:
-				await ctx.send("broke ass (you need ${0} to buy this)".format(price))
-				return
-
-
-		elif len(contractArgs) == 3: # this is an option
-			t, d, o, s, st = mp.parseContractInfo(' '.join(contractArgs))
-			price = ou.getOptionInfo(t, d, o, s, st)['lastPrice']
-
-			if currentLiquid > price:
-				currency.data[ID]['symbols'].append([st, numberOfContracts])
-			else:
-				await ctx.send("broke ass (you need ${0} to buy this)".format(price))
-				return
-
-		else:
-			await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
-			return
+		currency.data[ID] = buySymbol(currency.data[ID], contractArgs, int(args[-1]))
 	except:
 		await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
 		raise ValueError("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
-		return
-
-
-	currency.data[ID]['currency'] -= price
+	
 	currency.save()
 	await ctx.send("Purchase sucessful")
-
 
 # Execute #
 bot.run(TOKEN)
