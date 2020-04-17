@@ -146,11 +146,7 @@ def getChartInfo(string):
 		optionsInfo = getOptionInfo(cS)
 	except:
 		raise ValueError("Couldn't parse the option info")
-
 	return num, optionsInfo
-
-
-
 
 # getChainDates (String ticker)
 # Given the database, formats and prints the optionchain

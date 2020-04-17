@@ -281,8 +281,9 @@ async def c(ctx, *args):
 	try:
 		await ctx.send("Compiling data....", delete_after=1.0)
 		length, optionInfo = ou.getChartInfo(string)
-		print(string, optionInfo['contractSymbol'], length)
-		file = discord.File(gc.generateChart(string, optionInfo['contractSymbol'], length))
+
+		chart = gc.Chart(string, optionInfo['underlyingSymbol'], length)
+		file = discord.File(chart.name)
 		await ctx.message.channel.send("Change in Price (and Volume)", file=file)
 	except:
 		await ctx.send("No data was found. This has two main causes:\n"
@@ -322,8 +323,8 @@ async def cs(ctx, *args):
 	# Tries generating the chart
 	try:
 		await ctx.send("Compiling data....", delete_after=1.0)
-		chart = gc.generateChart(ticker, ticker.upper(), length, interval=interval)
-		file = discord.File(chart)
+		chart = gc.Chart(ticker, ticker.upper(), length, interval=interval)
+		file = discord.File(chart.name)
 		# Sends the chart (if sucessful)
 		await ctx.message.channel.send("Price and Volume Changes", file=file)
 	except:
