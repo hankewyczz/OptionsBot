@@ -174,14 +174,15 @@ def getChainDates(ticker):
 	return result
 
 
-# printChain(String ticker, int timestamp, Embed embed)
+# printChain(String ticker, int timestamp)
 # Adds the given chain to the given embed, and returns the altered embed
-def printChain(ticker, timestamp, embed):
+def printChain(ticker, timestamp):
 	try:
 		calls, puts = getChainAtDate(ticker, timestamp)
 	except:
 		raise ValueError("No data found for input")
 
+	strikes, values = [], []
 	for i in range(0, len(calls)-1):
 		# Formats the information displayed for each option
 		value = ""
@@ -192,6 +193,6 @@ def printChain(ticker, timestamp, embed):
 
 			value += "{0} ({1}),  {2}\n".format(price, change, vol)
 
-		embed.add_field(name = "Strike: {}".format(calls[i]['strike']), value=value, inline=False)
-
-	return embed
+		values.append(value)
+		strikes.append("Strike: {}".format(calls[i]['strike']))
+	return values, strikes

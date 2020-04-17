@@ -256,7 +256,9 @@ async def ops(ctx, *args):
 			embed.add_field(name="More Info", value="To search more specifically, use `!ops ticker date`", inline=False)
 		# Else, we have a date : try to get the info
 		else:
-			embed = ou.printChain(ticker, int(date.timestamp()), embed)
+			values, strikes = ou.printChain(ticker, int(date.timestamp()))
+			for i in range(0, len(values)-1):
+				embed.add_field(name = strikes[i], value=values[i], inline=False)
 	except:
 		await ctx.send("No data found. Please check the formatting, ticker spelling, and date")
 		raise ValueError("No data found for input")
@@ -291,7 +293,12 @@ async def c(ctx, *args):
 # Charts a stock
 # Takes a ticker and a duration
 @bot.command(aliases=['chartstock'])
-async def cs(ctx, ticker, duration):
+async def cs(ctx, *args):
+
+	try:
+		ticker, duration = args
+	except:
+		raise ValueError("Improperly formatted")
 
 	# Tries to calculate the length of the chart
 	try:
