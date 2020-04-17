@@ -199,7 +199,7 @@ async def purge(ctx, number):
 async def op(ctx, *args):
 	try:
 		t, d, o, s, st = mp.parseContractInfo(' '.join(args))
-		optionInfo = ou.getOptionInfo(t, d, o, s, st)
+		optionInfo = ou.getOptionInfo(st)
 	except:
 		await ctx.send("String could not be parsed. Please check your formatting (`!help`) for more info")
 		raise ValueError("String could not be parsed")
@@ -269,11 +269,12 @@ async def ops(ctx, *args):
 @bot.command(aliases=['chart'])
 async def c(ctx, *args):
 	string = ' '.join(args)
+	string = string.upper()
 
 	try:
 		await ctx.send("Compiling data....", delete_after=1.0)
-		print(string)
 		length, optionInfo = ou.getChartInfo(string)
+		print(string, optionInfo['contractSymbol'], length)
 		file = discord.File(gc.generateChart(string, optionInfo['contractSymbol'], length))
 		await ctx.message.channel.send("Change in Price (and Volume)", file=file)
 	except:
@@ -446,7 +447,7 @@ async def validPurchase(currentLiquid, price):
 		return
 
 # buySymbol(data, list contractArgs, int numberOfContracts)
-
+# buys the given symbol
 async def buySymbol(data, contractArgs, numberOfContracts):
 	currentLiquid = data['currency']
 
@@ -459,14 +460,14 @@ async def buySymbol(data, contractArgs, numberOfContracts):
 
 	elif len(contractArgs) == 3: # this is an option
 		t, d, o, s, symbol = mp.parseContractInfo(' '.join(contractArgs))
-		price = ou.getOptionInfo(t, d, o, s, st)['lastPrice']
+		price = ou.getOptionInfo(symbol)['lastPrice']
 
 		if validPurchase(currentLiquid, price):
 			data['symbols'].append([symbol, numberOfContracts])
 
 	else:
-		await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
-		return
+		return await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
+		raise ValueError("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
 
 	data['currency'] -= price
 	return data

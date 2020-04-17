@@ -69,7 +69,7 @@ def optionsPortfolioValue(array):
 # Returns "num" strike prices both above and below the lastPrice
 def getStrikeRange(strikes, lastPrice, num=5):
 	# Finds the strikes closest to the lastPrice
-	for i in range(5, len(strikes)-1):
+	for i in range(num, len(strikes)-1):
 		if strikes[i] >= lastPrice:
 			strikesRange = [strikes[j] for j in range(i - num, i + num + 1)]
 			break
@@ -107,24 +107,10 @@ def getChainAtDate(ticker, timestamp):
 
 # getOptionInfo(String ticker, datetime date, String optionType, float optionType, string contractSymbol)
 # Given a string, it parses it and returns the corresponding option
-def getOptionInfo(ticker, date, optionType, strike, contractSymbol):
-	timestamp = int(date.timestamp())
-
-	url = baseURL + ticker + "?date=" + str(timestamp)
+def getOptionInfo(contractSymbol):
+	url = baseURL + contractSymbol
 	data = loadFrom(url)['optionChain']['result'][0]
-
-	# Gets the corresponding option type
-	optionTypeStr = {'C': 'calls', 'P': 'puts'}[optionType]
-	options = data['options'][0][optionTypeStr]
-
-	thisOption = [option for option in options if option['contractSymbol'] == contractSymbol]
-
-	try:
-		thisOption = thisOption[0]
-		
-	except:
-		raise ValueError("Could not find corresponding option")
-	return thisOption
+	return data
 
 
 
@@ -146,8 +132,8 @@ def getStockInfo(ticker):
 # getChartInfo (String string)
 # given a stirng as input, it splits and parses it using parseDurationInfo and getOptionInfo
 def getChartInfo(string):
-	time = string.upper()
-	time = time.split(" ")[-1]
+	string = string.upper()
+	time = string.split(" ")[-1]
 
 	if time[-1:].isalpha():
 		num = mp.parseDurationInfo(time)
@@ -157,12 +143,11 @@ def getChartInfo(string):
 	try:
 		contractInfo = string.replace(time, '')
 		t, d, o, s, cS = mp.parseContractInfo(contractInfo)
-		optionsInfo = getOptionInfo(t, d, o, s, cS)
+		optionsInfo = getOptionInfo(cS)
 	except:
 		raise ValueError("Couldn't parse the option info")
 
 	return num, optionsInfo
-
 
 
 

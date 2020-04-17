@@ -17,9 +17,6 @@ parseContractInfo(String string)
 parseChainInfo(String string)
 	Given an option chain request, this returns the parsed ticker and date (if exists)
 
-getOptionInfo(String ticker, datetime date, String optionType, float optionType, string contractSymbol)
-	Given a string, it parses it and returns the corresponding option
-
 parseDurationInfo(String time, maxDur int)
 	Takes a string of the duration and converts it into an integer
 
@@ -120,20 +117,6 @@ def contractSymbolToInfo(cSymbol):
 	date = parser.parse(date, tzinfos={None: 0}) # Creates the datetime object
 
 	return ticker, date, optionType, strike
-	
-
-
-
-
-
-# contractSymbolToData (String cSymbol)
-# Converts a contractSymbol to data
-def contractSymbolToData(cSymbol):
-	ticker, date, optionType, strike = contractSymbolToInfo(cSymbol)
-	return getOptionInfo(ticker, date, optionType, strike, cSymbol)
-
-
-
 
 
 

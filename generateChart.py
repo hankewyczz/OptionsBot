@@ -6,6 +6,7 @@ import matplotlib.dates as md
 import matplotlib.ticker as mtick
 import numpy as np
 import messageParser as mp
+import optionsUtil as ou
 
 
 '''
@@ -38,8 +39,7 @@ def getData(symbol, length, interval):
 	startDate = endDate - timedelta(days=length)
 
 	# Calculates the unix timestamps for the start/end dates
-	period1 = int(startDate.timestamp())
-	period2 = int(endDate.timestamp())
+	period1, period2 = [int(x.timestamp()) for x in [startDate, endDate]]
 	
 	# All the URL arguments
 	# "interval" MUST be 2m. No clue why, but Yahoo throws a hissy fit if we try using other intervals, 
@@ -50,15 +50,10 @@ def getData(symbol, length, interval):
 	for key in urlArgs.keys():
 		urlArgsString = "{0}{1}={2}&".format(urlArgsString, key, urlArgs[key])
 
-	# Oh yeah, it's all coming together
-	url = "{0}{1}?{2}".format(baseURL, symbol, urlArgsString)
-	print(url)
+	# Oh yeah, it's all coming together (put the URL together and fetch data)
+	data = ou.loadFrom("{0}{1}?{2}".format(baseURL, symbol, urlArgsString))
 
-	# Grab the data from the URL
-	data = mp.loadFrom(url)
-
-	try:
-		# Using time as the bellwether here - everything else, we can extrapolate
+	try: # Using time as the bellwether here - everything else, we can extrapolate
 		time = data['chart']['result'][0]['timestamp']
 	except:
 		raise ValueError("Not enough data for a graph")
@@ -71,25 +66,24 @@ def getData(symbol, length, interval):
 		prevClose = data['chart']['result'][0]['meta']['chartPreviousClose']
 	
 	# Extrapolates data to fit every point (Yahoo has some [many] blind spots for some [most] contracts)
-	price = extrapolateData(price, prevClose, True)
-	volume = extrapolateData(volume, 0, False)
+	price = extrapolateData(price, prevClose)
+	volume = [0 if x == None else x for x in volume]
+
 
 	# returns a list[int], list[float], list[int]
 	return time, price, volume
 
 
-# (list[X] data, X prev, boolean append)
+# (list[X] data, X prev)
 # Fills any blank spots in the data by extrapolating 
-def extrapolateData(data, prev, updatePrev):
+def extrapolateData(data, prev):
 	new = []
 	for d in data:
 		if d == None:
 			new.append(prev)
 		else:
 			new.append(d)
-			# Checks if the prev value should be updated (false for volume)
-			if updatePrev:
-				prev = d
+			prev = d
 	return new
 
 
@@ -104,13 +98,12 @@ def tickFormatter(length, ax2):
 	if length <= 10:
 		if length > 5 and length < 10:
 			length = 5
-		elif length < 5 and length > 2:
+		elif length > 2 and length < 5:
 			length = 2
 		majF, majL, minF, minL = formatting[length][0], formatting[length][1], formatting[length][2], formatting[length][3]
 
 	# long-term cases
 	elif length > 10:
-		length = round(length/10) * 10
 		majF, majL, minF, minL = formatting[10][0], 24 * int(length/10), formatting[10][2], 48 * int(length/10)
 
 	# Sets the x-axis date formats
@@ -126,12 +119,14 @@ def tickFormatter(length, ax2):
 
 # generateAxes(x, y, dates)
 # generates the axes and figure from the x, y, and dates
-def generateAxes(x, y, dates):
+def generateAxes(x, y):
 	# Calculates the min and max of the y-axis (for price)
 	# We don't want the max to be 0, so we take the max of (2 and the real max)
 	yMax = int(max(2, np.max(y)))
 	yMin = int(np.min(y))
 	yRange = int((yMax - yMin) / 2)
+
+	dates = [datetime.fromtimestamp(date) for date in x]
 
 	# Init
 	fig, ax1 = plt.subplots()
@@ -151,12 +146,12 @@ def generateAxes(x, y, dates):
 
 # (list[int] x, list[float] y, list[int] vol, String title, int length)
 # Takes lists of x, y, and volume data, and draws a graph
-def drawGraph(x, y, vol, symbol, title, length):
+def drawGraph(x, y, vol, length):
 	# Converts the timestamps in x into date objects
 	dates = [datetime.fromtimestamp(date) for date in x]
 
 	# Initializes
-	fig, ax1 = generateAxes(x, y, dates)
+	fig, ax1 = generateAxes(x, y)
 
 	# Initializes axes2 with identical xAxis
 	ax2 = tickFormatter(length, ax1.twinx())
@@ -171,14 +166,8 @@ def drawGraph(x, y, vol, symbol, title, length):
 	ax1.plot(dates, y, "#00A95D")
 	l1 = ax1.fill_between(dates, y, facecolor="#00A95D")
 
-	# Meta
-	plt.title(title)
 	plt.legend([l1, l2], ["Price", "Volume"]) # Legend for both
-	name = "charts/" + symbol + '.png'
-	plt.savefig(name)
-
-	# Returns the filename
-	return name
+	return fig, ax1, ax2
 
 # (String string, String symbol, int length)
 # Takes the given string, the contract symbol, and the length of data to be viewed
@@ -187,4 +176,13 @@ def generateChart(string, symbol, length, interval="2m"):
 	cleanTitle = string.upper()
 	cleanTitle = cleanTitle.replace("$", "\$")
 
-	return drawGraph(time, price, volume, symbol, cleanTitle, length)
+	fig, ax1, ax2 = drawGraph(time, price, volume, length)
+
+	# Meta
+	plt.title(cleanTitle)
+	
+	name = "charts/" + symbol + '.png'
+	plt.savefig(name)
+
+	# Returns the filename
+	return name
