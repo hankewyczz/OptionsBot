@@ -2,7 +2,7 @@
 import urllib.request
 import json
 from datetime import datetime
-import messageParser as mp
+from Formatting import messageParser as mp
 
 
 
@@ -105,7 +105,7 @@ def getChainAtDate(ticker, timestamp):
 
 
 
-# getOptionInfo(String ticker, datetime date, String optionType, float optionType, string contractSymbol)
+# getOptionInfo(string contractSymbol)
 # Given a string, it parses it and returns the corresponding option
 def getOptionInfo(contractSymbol):
 	url = baseURL + contractSymbol

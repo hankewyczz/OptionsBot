@@ -1,10 +1,9 @@
 # A bot for parsing text into options data
 from datetime import datetime
-from dateutil import parser, tz
-import json
+from dateutil import parser
 import re
 import unittest
-import stringFormat as sf
+from Formatting import stringFormat as sf
 
 '''
 ##############
@@ -130,35 +129,42 @@ def contractSymbolToInfo(cSymbol):
 #########
 
 class TestStringMethods(unittest.TestCase):
-	def initExamples(self, option):
-		return parseContractInfo(option)
+	def setUp(self):
+		self.t1, self.d1, self.o1, self.s1, self.str1 = parseContractInfo("$SPY 4/17c $300")
+		self.t2, self.d2, self.o2, self.s2, self.str2 = parseContractInfo("spy 4/17c 300")
+		self.t3, self.d3, self.o3, self.s3, self.str3 = parseContractInfo("$spy 4/17C $300.00")
+		self.t4, self.d4, self.o4, self.s4, self.str4 = parseContractInfo("spy 4-17c 300")
 
+	
+	def testTickerFormatting(self):
+		self.setUp()
+		self.assertEqual(self.t1, self.t2)
+		self.assertEqual(self.t1, self.t3)
+		self.assertEqual(self.t1, self.t4)
 
-	def test_parse(self):
-		t1, d1, o1, s1, str1 = self.initExamples("$SPY 4/17c $300")
-		t2, d2, o2, s2, str2 = self.initExamples("spy 4/17c 300")
-		t3, d3, o3, s3, str3 = self.initExamples("$spy 4/17C $300.00")
-		t4, d4, o4, s4, str4 = self.initExamples("spy 4-17c 300")
-		
-		self.assertEqual(t1, t2)
-		self.assertEqual(t1, t3)
-		self.assertEqual(t1, t4)
+	def testDateFormatting(self):
+		self.setUp()
+		self.assertEqual(self.d1, self.d2)
+		self.assertEqual(self.d1, self.d3)
+		self.assertEqual(self.d1, self.d4)
 
-		self.assertEqual(d1, d2)
-		self.assertEqual(d1, d3)
-		self.assertEqual(d1, d4)
+	def testOptionTypeFormatting(self):
+		self.setUp()
+		self.assertEqual(self.o1, self.o2)
+		self.assertEqual(self.o1, self.o3)
+		self.assertEqual(self.o1, self.o4)
 
-		self.assertEqual(o1, o2)
-		self.assertEqual(o1, o3)
-		self.assertEqual(o1, o4)
+	def testStrikeFormatting(self):
+		self.setUp()
+		self.assertEqual(self.s1, self.s2)
+		self.assertEqual(self.s1, self.s3)
+		self.assertEqual(self.s1, self.s4)
 
-		self.assertEqual(s1, s2)
-		self.assertEqual(s1, s3)
-		self.assertEqual(s1, s4)
-
-		self.assertEqual(str1, str2)
-		self.assertEqual(str1, str3)
-		self.assertEqual(str1, str4)
+	def testSymbolFormatting(self):
+		self.setUp()
+		self.assertEqual(self.str1, self.str2)
+		self.assertEqual(self.str1, self.str3)
+		self.assertEqual(self.str1, self.str4)
 
 
 if __name__ == "__main__":
