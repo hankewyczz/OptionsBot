@@ -5,7 +5,6 @@ import json
 import re
 import unittest
 import stringFormat as sf
-import optionsUtil as ou
 
 '''
 ##############
@@ -97,8 +96,8 @@ def parseDurationInfo(durationAsStr, maxDur=60):
 	multiplier = {"D": 1, "W": 7, "M": 30, "Y": 365}[durationAsStr[-1:]]
 	return min(number * multiplier, maxDur)
 
-
-
+def test():
+	return("Test")
 
 
 

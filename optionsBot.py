@@ -18,6 +18,13 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 BOT_ADMIN_ID = os.getenv('BOT_ADMIN')
 
+# For putting someone in timeout
+MOVE_BACK = False
+MEMBER_TO_MOVE = []
+TIMEOUT_CHANNEL = int(os.getenv("TIMEOUT_CHANNEL"))
+UNSIMPABLE = [str(BOT_ADMIN_ID), "201503408652419073", "285480424904327179"]
+
+
 
 def initialize():
 	# Initializes with command prefix
@@ -27,10 +34,9 @@ def initialize():
 
 	return bot, client
 
-
-
 # Initialize the bot
 bot, client = initialize()
+
 
 
 
@@ -48,15 +54,6 @@ async def on_ready():
 def is_approved(ctx):
 	return str(BOT_ADMIN_ID) == str(ctx.message.author.id)
 
-
-
-
-
-# For putting someone in timeout
-MOVE_BACK = False
-MEMBER_TO_MOVE = []
-TIMEOUT_CHANNEL = int(os.getenv("TIMEOUT_CHANNEL"))
-UNSIMPABLE = [str(BOT_ADMIN_ID), "201503408652419073", "285480424904327179"]
 
 
 
@@ -286,6 +283,7 @@ async def c(ctx, *args):
 
 	try:
 		await ctx.send("Compiling data....", delete_after=1.0)
+		print(string)
 		length, optionInfo = ou.getChartInfo(string)
 		file = discord.File(gc.generateChart(string, optionInfo['contractSymbol'], length))
 		await ctx.message.channel.send("Change in Price (and Volume)", file=file)
@@ -394,7 +392,7 @@ async def portfolio(ctx):
 	ID = str(ctx.message.author.id)
 	check_id(ID)
 
-	optionValue, change, percentChange = mp.optionsPortfolioValue(currency.data[ID]['symbols'])
+	optionValue, change, percentChange = ou.optionsPortfolioValue(currency.data[ID]['symbols'])
 	stockValue, stockChange, stockPercentChange = ou.stocksPortfolioValue(currency.data[ID]['stocks'])
 
 	totalValue = round(optionValue + stockValue + currency.data[ID]['currency'], 2)
@@ -418,7 +416,7 @@ async def leaderboard(ctx):
 	members = []
 	for ID, assets in currency.data.items():
 		if ID != 'name':
-			optionValue, change, percentChange = mp.optionsPortfolioValue(assets['symbols'])
+			optionValue, change, percentChange = ou.optionsPortfolioValue(assets['symbols'])
 			totalValue = optionValue + assets['currency']
 			members.append((ID, totalValue))
 

@@ -1,8 +1,9 @@
 # Utility functions for options
-import messageParser as mp
 import urllib.request
 import json
 from datetime import datetime
+import messageParser as mp
+
 
 
 
@@ -149,15 +150,19 @@ def getChartInfo(string):
 	time = string.split(" ")[-1]
 
 	if time[-1:].isalpha():
-		num = mp.parseDurationInfo(time)
+		try:
+			num = mp.parseDurationInfo(time)
+		except:
+			raise ValueError("Couldn't parse the option info")
+
 	else: 
 		num = int(time[-1:])
 	try:
 		contractInfo = string.replace(time, '')
-		optionsInfo = getOptionInfo(parseContractInfo(contractInfo))
+		t, d, o, s, cS = mp.parseContractInfo(contractInfo)
+		optionsInfo = getOptionInfo(t, d, o, s, cS)
 	except:
 		raise ValueError("Couldn't parse the option info")
-		return
 
 	return num, optionsInfo
 
@@ -207,5 +212,5 @@ def printChain(ticker, timestamp, embed):
 			value += "{0} ({1}),  {2}\n".format(price, change, vol)
 
 		embed.add_field(name = "Strike: {}".format(calls[i]['strike']), value=value, inline=False)
-	
+
 	return embed
