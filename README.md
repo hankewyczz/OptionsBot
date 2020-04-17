@@ -4,8 +4,6 @@
 
 A Python-based Discord bot which can be used for fetching stock and options info, charting their price and volume changes, and for trading stocks and options. 
 
-The main point of this was to create a bot for trading options contracts - the rest evolved as addons to the bot. 
-
 ## Installation
 
 You'll need to create a `.env` file with two lines in it:
@@ -45,11 +43,26 @@ where `DISCORD_TOKEN` is your discord bot token, and `BOT_ADMIN` is the user ID 
 `!remove N <@user>` : Removes N dollars from the given user
 
 
-## Troubleshooting
+# API
+## Yahoo API
 
-99% of the time, any bot errors are due to users forgetting how to format commands. Hopefully, all of these cases have been covered, but in the off chance I missed one, restarting the bot should do the trick.
+This project makes use of Yahoo's financial API, which unfortunatly isn't publically documented. As such, the project makes do with two versons of the API:
 
-If the bot completely stops working, odds are Yahoo changed their API. This will result in one of two cases: 
+* V. 7:
+  * V7 of the API is used to fetch contract information, stock information, and option chains
+* V. 8:
+  * V8 of the API is used to fetch chart data for graphing
 
-- 1) They just changed the URL scheme, in which case, a fix should take minutes
-- 2) They completely rewrote their API / removed it from public view / restricted it, in which case a fix will take a while (and might not be worthwile). 
+
+Ideally, this project could make use of only one of them. However, it uses both for the following reasons:
+* V7 doesn't have a documented method of fetching chart data
+  * I didn't have the time to figure it out, and other people had informally documented the process for V8
+* V8 changed the format of fetching plain stock/option information
+  * I couldn't find any informal documentation about this on V8. Additionally, due to its age, V7 was more throughly (relativly speaking) documented
+
+## Effects
+As a result, the API might go under at any time, at Yahoo's discretion. Unless they completly rework it, it should be relativly easy to update the bot. 
+
+
+  
+  
