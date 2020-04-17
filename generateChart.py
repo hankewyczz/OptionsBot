@@ -93,35 +93,10 @@ def extrapolateData(data, prev, updatePrev):
 	return new
 
 
-# (list[int] x, list[float] y, list[int] vol, String title, int length)
-# Takes lists of x, y, and volume data, and draws a graph
-def drawGraph(x, y, vol, symbol, title, length):
 
-	# Calculates the min and max of the y-axis (for price)
-	# We don't want the max to be 0, so we take the max of (2 and the real max)
-	yMax = int(max(2, np.max(y)))
-	yMin = int(np.min(y))
-	yRange = int((yMax - yMin) / 2)
-
-	# Init
-	fig, ax1 = plt.subplots()
-
-	# Converts the timestamps in x into date objects
-	dates = [datetime.fromtimestamp(date) for date in x]
-
-	# Sets the max and min for the x-axis
-	ax1.set_xlim(xmin = np.min(dates), xmax = np.max(dates))
-	# Sets min/max for pricing. Min can never go below 0.
-	ax1.set_ylim(ymin = max(0, yMin - yRange), ymax = yMax + yRange)
-
-	# Sets the tick formatting for the prices y-axis
-	yAxisPriceFormt = mtick.StrMethodFormatter('${x:,.0f}')
-	ax1.yaxis.set_major_formatter(yAxisPriceFormt)
-
-	# Initializes axes2 with identical xAxis
-	ax2 = ax1.twinx()
-	ax2.set_ylim(ymin = 0, ymax = max(vol) * 2) # So volume occupies the bottom half of the graph
-	
+# tickFormatter(int length)
+# Given the chart duration, determine x-Axis formatting
+def tickFormatter(length, ax2):
 	# Sets the tick formatting for the x-axis
 	formatting = {1: ["%H:%M", 1, "%H:%M", 8], 2: ["%m/%d", 24, "%H:%M", 4], 5: ["%m/%d", 24, "%H:%M", 12], 10: ["%m/%d", 24, "%H:%M", 48]}
 
@@ -137,12 +112,56 @@ def drawGraph(x, y, vol, symbol, title, length):
 	elif length > 10:
 		length = round(length/10) * 10
 		majF, majL, minF, minL = formatting[10][0], 24 * int(length/10), formatting[10][2], 48 * int(length/10)
-	
+
 	# Sets the x-axis date formats
 	ax2.xaxis.set_major_formatter(md.DateFormatter(majF))
 	ax2.xaxis.set_major_locator(md.HourLocator(interval=majL))
 	ax2.xaxis.set_minor_formatter(md.DateFormatter(minF))
 	ax2.xaxis.set_minor_locator(md.HourLocator(interval=minL))
+	return ax2
+
+
+
+
+
+# generateAxes(x, y, dates)
+# generates the axes and figure from the x, y, and dates
+def generateAxes(x, y, dates):
+	# Calculates the min and max of the y-axis (for price)
+	# We don't want the max to be 0, so we take the max of (2 and the real max)
+	yMax = int(max(2, np.max(y)))
+	yMin = int(np.min(y))
+	yRange = int((yMax - yMin) / 2)
+
+	# Init
+	fig, ax1 = plt.subplots()
+
+	# Sets the max and min for the x-axis
+	ax1.set_xlim(xmin = np.min(dates), xmax = np.max(dates))
+	# Sets min/max for pricing. Min can never go below 0.
+	ax1.set_ylim(ymin = max(0, yMin - yRange), ymax = yMax + yRange)
+
+	# Sets the tick formatting for the prices y-axis
+	ax1.yaxis.set_major_formatter(mtick.StrMethodFormatter('${x:,.0f}'))
+
+	return fig, ax1
+
+
+
+
+# (list[int] x, list[float] y, list[int] vol, String title, int length)
+# Takes lists of x, y, and volume data, and draws a graph
+def drawGraph(x, y, vol, symbol, title, length):
+	# Converts the timestamps in x into date objects
+	dates = [datetime.fromtimestamp(date) for date in x]
+
+	# Initializes
+	fig, ax1 = generateAxes(x, y, dates)
+
+	# Initializes axes2 with identical xAxis
+	ax2 = tickFormatter(length, ax1.twinx())
+	ax2.set_ylim(ymin = 0, ymax = max(vol) * 2) # So volume occupies the bottom half of the graph
+	
 
 	# Plots the volume
 	ax2.plot(dates, vol, "#B2DCCB")
