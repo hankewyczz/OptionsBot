@@ -1,20 +1,5 @@
-# formatStrike(String strike)
-# Formats the decimals of the stock price
-def formatStrike(strike):
-	# Properly appends a decimal to the strike price
-	if "." in strike:
-		strikeSplit = len(strike.split(".")[1])
+import re
 
-		if len(strikeSplit) > 3:
-			strike += "." + strikeSplit[:3] # Truncates it
-		else:
-			for i in range(strikeSplit, 3):
-				strike += "0"
-	else:
-		strike += ".000"
-
-	strikeAsString = formatStrikeAsString(strike)
-	return strike, strikeAsString
 
 
 # formatStrikeAsString(String strike) 
@@ -26,3 +11,38 @@ def formatStrikeAsString(strike):
 		strikeAsString = "0" + strikeAsString # Adds leading 0s to fill the string
 
 	return strikeAsString
+
+
+
+
+
+# formatStrike(String strike)
+# Formats the decimals of the stock price
+def formatStrike(strike):
+	# Properly appends a decimal to the strike price
+	if "." in strike:
+		strikeSplit = strike.split(".")[1]
+		strikeLen = len(strikeSplit)
+
+		if strikeLen > 3:
+			strike += "." + strikeSplit[:3] # Truncates it
+		else:
+			for i in range(strikeLen, 3):
+				strike += "0"
+	else:
+		strike += ".000"
+
+	strikeAsString = formatStrikeAsString(strike)
+	return strike, strikeAsString
+
+
+
+
+
+
+
+
+
+
+
+

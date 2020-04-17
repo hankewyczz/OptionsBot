@@ -19,12 +19,21 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 BOT_ADMIN_ID = os.getenv('BOT_ADMIN')
 
 
+def initialize():
+	# Initializes with command prefix
+	bot = commands.Bot(command_prefix='!')
+	client = discord.Client()
+	bot.remove_command('help') # Removes the default help command
+
+	return bot, client
 
 
-# Initializes with command prefix
-bot = commands.Bot(command_prefix='!')
-client = discord.Client()
-bot.remove_command('help') # Removes the default help command
+
+# Initialize the bot
+bot, client = initialize()
+
+
+
 
 # Changes the bot presence state
 @bot.event
@@ -204,7 +213,7 @@ async def op(ctx, *args):
 
 	try:
 		t, d, o, s, st = mp.parseContractInfo(string)
-		optionInfo = mp.getOptionInfo(t, d, o, s, st)
+		optionInfo = ou.getOptionInfo(t, d, o, s, st)
 	except:
 		await ctx.send("String could not be parsed. Please check your formatting (`!help`) for more info")
 		return
@@ -245,59 +254,27 @@ async def op(ctx, *args):
 async def ops(ctx, *args):
 	string = ' '.join(args)
 
-	# Tries to parse the string
-	try:
+	try: # Tries parsing the stirng
 		ticker, date = mp.parseChainInfo(string)
 	except:
-		await ctx.send("No data found. Please check the formatting and the ticker spelling")
-		return
+		await ctx.send("Please check the formatting and the ticker spelling")
+		raise ValueError("Improperly formatted input")
 
 	# Initializes the embed
 	embed = discord.Embed(title=string.upper(), description=("When a date is specified, 5 options above/below "
 		"the current price will be returned\nFormat: `Strike Price`\nCall Option\nPut Option"), color=0x0000ff)
 
-	# Makes the URL
-	url = mp.baseURL + ticker
-
 	# If we're not given a date:
 	if date == None:
-		data = mp.loadFrom(url)['optionChain']['result'][0]['expirationDates']
-
-		result = ""
-		for datum in data:
-			date = datetime.utcfromtimestamp(datum)
-			if date.year == 2020:
-				date = date.strftime('%b %d')
-			else:
-				date = date.strftime('%m/%d/%y')
-			result += str(date) + ", "
-
-		embed.add_field(name="Availible Dates", value=result)
+		embed.add_field(name="Availible Dates", value = ou.getChainDates(ticker))
 		embed.add_field(name="More Info", value="To search more specifically, use `!ops ticker date`", inline=False)
+	# Else, we have a date : try to get the info
 	else:
-		# We have a date : try to get the info
 		try:
-			calls, puts = mp.parseChainInfoAtDate(ticker, int(date.timestamp()))
+			embed = ou.printChain(ticker, int(date.timestamp()), embed)
 		except:
 			await ctx.send("No data found. Please check the formatting, ticker spelling, and date")
-			return
-
-		for i in range(0, len(calls)-1):
-
-			# Formats the information displayed for each option
-			strike = "Strike: {}".format(calls[i]['strike'])
-
-			value = ""
-			for type in [calls, puts]:
-				price = "**__Price__**: ${0}".format(round(type[i]['lastPrice'], 2))
-				change = "{0}%".format(round(type[i]['percentChange'], 2))
-				vol = "**__Vol / OI__**: {0} / {1}".format(type[i]['volume'], type[i]['openInterest'])
-
-				string = "{0} ({1}),  {2}\n".format(price, change, vol)
-				value += string
-
-			embed.add_field(name=strike, value=value, inline=False)
-
+			raise ValueError("No data found for input")
 	embed.set_footer(text="Data requested " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)'))
 	await ctx.send(embed=embed)
 
@@ -309,7 +286,7 @@ async def c(ctx, *args):
 
 	try:
 		await ctx.send("Compiling data....", delete_after=1.0)
-		length, optionInfo = mp.getChartInfo(string)
+		length, optionInfo = ou.getChartInfo(string)
 		file = discord.File(gc.generateChart(string, optionInfo['contractSymbol'], length))
 		await ctx.message.channel.send("Change in Price (and Volume)", file=file)
 	except:
@@ -330,7 +307,7 @@ async def cs(ctx, ticker, duration):
 
 	# Tries to calculate the length of the chart
 	try:
-		length = mp.getDurationInfo(duration.upper(), maxDur=(365*3))
+		length = mp.parseDurationInfo(duration.upper(), maxDur=(365*3))
 		if length < 10:
 			interval = "5m"
 		elif length < 30:
@@ -478,7 +455,7 @@ async def buy(ctx, *args):
 		numberOfContracts = int(args[-1])
 
 		if len(contractArgs) == 1: # this is a stock
-			info = mp.getStockInfo(contractArgs[0])
+			info = ou.getStockInfo(contractArgs[0])
 			price = info['postMarketPrice']
 
 			if currentLiquid > price:
@@ -490,7 +467,7 @@ async def buy(ctx, *args):
 
 		elif len(contractArgs) == 3: # this is an option
 			t, d, o, s, st = mp.parseContractInfo(' '.join(contractArgs))
-			price = mp.getOptionInfo(t, d, o, s, st)['lastPrice']
+			price = ou.getOptionInfo(t, d, o, s, st)['lastPrice']
 
 			if currentLiquid > price:
 				currency.data[ID]['symbols'].append([st, numberOfContracts])
