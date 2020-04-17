@@ -4,9 +4,9 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import asyncio
 # From project
-import messageParser as mp
+from Formatting import messageParser as mp
 import generateChart as gc
-import optionsUtil as ou
+from Utils import optionsUtil as ou
 # General
 import os
 from datetime import datetime

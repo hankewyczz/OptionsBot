@@ -1,12 +1,9 @@
 from datetime import datetime, timedelta
-import urllib.request
-import json
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import matplotlib.ticker as mtick
 import numpy as np
-import messageParser as mp
-import optionsUtil as ou
+from Utils import optionsUtil as ou
 
 
 '''
