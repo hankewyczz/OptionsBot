@@ -7,7 +7,6 @@ import asyncio
 import messageParser as mp
 import generateChart as gc
 import optionsUtil as ou
-from pyson import pyson
 # General
 import os
 from datetime import datetime
@@ -56,6 +55,12 @@ def is_approved(ctx):
 
 
 
+
+
+
+
+
+
 # If someone's acting up, removes them from this voice channel and moves them everytime they join back
 @bot.command(name='simp')
 async def simp(ctx, member:discord.Member=None):
@@ -83,8 +88,8 @@ async def simp(ctx, member:discord.Member=None):
 async def newVoiceChannel(guild, name):
 	await guild.create_voice_channel(name=name)
 	for c in guild.voice_channels:
-	    if c.name == name:
-	        return c.id
+		if c.name == name:
+			return c.id
 
 
 ## If they try leaving, move them back
@@ -333,8 +338,26 @@ async def cs(ctx, *args):
 #############
 ## ECONOMY ##
 #############
+class jFile:
+	def __init__(self, fileName):
+		# Check if valid file
+		if os.path.isfile(fileName):
+			try:
+				with open(fileName) as f:
+					data = json.load(f)
+				
+				self.fileName = fileName
+				self.data = data
+			except:
+				raise ValueError("Could not load data from json file")
+	# Saves the json file 
+	def save(self):
+		with open(self.fileName, "w") as f:
+			json.dump(self.data, f, indent=4, sort_keys=True)
 
-currency=pyson('currency')
+
+
+currency=jFile('currency.json')
 if 'name' not in currency.data:
 	currency.data['name']='USD'
 
@@ -403,11 +426,12 @@ async def memberPortfolio(id):
 # Checks your portfolio value
 @bot.command(pass_context=True)
 async def portfolio(ctx):
-	value, change, percentChange, optionValue, stockValue = await memberPortfolio(ctx.message.author.id)
+	ID = str(ctx.message.author.id)
+	value, change, percentChange, optionValue, stockValue = await memberPortfolio(ID)
 
 	await ctx.send(("your broke ass only has ${0} (Change: ${1} / {2}%)\n"
 		"Investing power: ${3}\nOptions: ${4}\n"
-		"Stocks: ${5}").format(totalValue, totalChange, totalPercentChange, currency.data[ID]['currency'], optionValue, stockValue))
+		"Stocks: ${5}").format(value, change, percentChange, currency.data[ID]['currency'], optionValue, stockValue))
 	
 	if str(ctx.message.author.id) == "160507791059058688":
 		await ctx.send("Steven?: true\nSimp?: true\nHotel?: Trivago")
