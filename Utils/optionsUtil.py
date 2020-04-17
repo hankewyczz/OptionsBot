@@ -2,10 +2,26 @@
 import urllib.request
 import json
 from datetime import datetime
-from Formatting import messageParser as mp
+
+import sys, os
+parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(parent, "Formatting"))
+import messageParser as mp
 
 
+'''
+##############
+## OVERVIEW ##
+##############
 
+loadFrom(String url)
+	loads the data from the given URL
+
+stocksPortfolioValue (list[String] array)
+	Calculates the total portfolio value and changes
+
+
+'''
 
 
 # the base URL
@@ -45,6 +61,8 @@ def stocksPortfolioValue(array):
 
 
 
+
+
 # optionsPortfolioValue (list[String] array)
 # Calculates the total portfolio value and changes
 def optionsPortfolioValue(array):
@@ -65,6 +83,8 @@ def optionsPortfolioValue(array):
 
 
 
+
+
 # getStrikeRange(List[int] strikes, int lastPrice, int num)
 # Returns "num" strike prices both above and below the lastPrice
 def getStrikeRange(strikes, lastPrice, num=5):
@@ -75,6 +95,8 @@ def getStrikeRange(strikes, lastPrice, num=5):
 			break
 
 	return strikesRange
+
+
 
 
 
@@ -168,6 +190,9 @@ def getChainDates(ticker):
 
 		result += str(date) + ", "
 	return result
+
+
+
 
 
 # printChain(String ticker, int timestamp)

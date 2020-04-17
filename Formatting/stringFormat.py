@@ -1,6 +1,17 @@
 import re
 
+'''
+##############
+## OVERVIEW ##
+##############
 
+formatStrikeAsString(String strike) 
+	Formats the strike price as a string for the contracts symbol (eg. 00300000)
+
+formatStrike(String strike)
+	Formats the decimals of the stock price
+	
+'''
 
 # formatStrikeAsString(String strike) 
 # Formats the strike price as a string for the contracts symbol (eg. 00300000)
