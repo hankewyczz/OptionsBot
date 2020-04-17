@@ -33,7 +33,7 @@ baseURL = "https://query1.finance.yahoo.com/v8/finance/chart/"
 
 # (String symbol, int length, int interval)
 # Takes the ticker/contract symbol and the duration of the chart
-def getData(symbol, length, interval):
+def getData(symbol, length):
 	# Gets the start and end dates of the chart based on the arg length
 	endDate = datetime.now()
 	startDate = endDate - timedelta(days=length)
@@ -44,6 +44,7 @@ def getData(symbol, length, interval):
 	# All the URL arguments
 	# "interval" MUST be 2m. No clue why, but Yahoo throws a hissy fit if we try using other intervals, 
 	# even though it lists [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo] as valid intervals
+	interval = "2m"
 	urlArgs = {"period1": str(period1), "period2": str(period2), "interval": interval, "includePrePost": "true"}
 
 	urlArgsString = ""
@@ -171,7 +172,7 @@ def drawGraph(x, y, vol, length):
 
 # (String string, String symbol, int length)
 # Takes the given string, the contract symbol, and the length of data to be viewed
-def generateChart(string, symbol, length, interval="2m"):
+def generateChart(string, symbol, length):
 	time, price, volume = getData(symbol, length, interval)
 	cleanTitle = string.upper()
 	cleanTitle = cleanTitle.replace("$", "\$")
