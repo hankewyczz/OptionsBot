@@ -3,7 +3,7 @@ import re
 
 
 # formatStrikeAsString(String strike) 
-# Formats the strike price as a string for the contracts symbol (eg. 00030000)
+# Formats the strike price as a string for the contracts symbol (eg. 00300000)
 def formatStrikeAsString(strike):
 	# Gets the stock price as a string
 	strikeAsString = re.sub('[^0-9]', '', strike)
@@ -25,6 +25,7 @@ def formatStrike(strike):
 		strikeLen = len(strikeSplit)
 
 		if strikeLen > 3:
+			strike = strike.split(".")[0]
 			strike += "." + strikeSplit[:3] # Truncates it
 		else:
 			for i in range(strikeLen, 3):
@@ -34,15 +35,3 @@ def formatStrike(strike):
 
 	strikeAsString = formatStrikeAsString(strike)
 	return strike, strikeAsString
-
-
-
-
-
-
-
-
-
-
-
-

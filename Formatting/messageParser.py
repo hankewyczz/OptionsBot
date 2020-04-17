@@ -22,12 +22,6 @@ parseDurationInfo(String time, maxDur int)
 contractSymbolToInfo(String cSymbol)
 	Given a contract symbol, it parses it into seperate pieces of information
 
-contractSymbolToData (String cSymbol)
-	Converts a contractSymbol to data
-
-optionsPortfolioValue (list[String] array)
-	Calculates the total portfolio value and changes
-
 '''
 
 # parseContractInfo(String string)
@@ -89,11 +83,10 @@ def parseChainInfo(string):
 # Takes a string of the duration and converts it into an integer
 def parseDurationInfo(durationAsStr, maxDur=60):
 	number = int(durationAsStr[:-1]) # gets everything but the character denoting the multiplier
-	multiplier = {"D": 1, "W": 7, "M": 30, "Y": 365}[durationAsStr[-1:]]
+	dateType = durationAsStr[-1:].upper()
+	multiplier = {"D": 1, "W": 7, "M": 30, "Y": 365}[dateType]
 	return min(number * multiplier, maxDur)
 
-def test():
-	return("Test")
 
 
 
@@ -108,7 +101,8 @@ def contractSymbolToInfo(cSymbol):
 
 	dateSplit = cSymbol.split(date)[1] # splits the string on the date (ie. returns the strike)
 
-	strike = dateSplit[1:6] + "." + dateSplit[6:] # adds the deminal
+	strike = dateSplit[1:6] + "." + dateSplit[6:] # adds the decimal
+	strike = re.sub("^0+", "", strike) # strips the leading zeros
  
 	optionType = dateSplit[0:1] # parses the option type
 
