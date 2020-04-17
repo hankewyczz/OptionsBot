@@ -22,7 +22,7 @@ BOT_ADMIN_ID = os.getenv('BOT_ADMIN')
 MOVE_BACK = False
 MEMBER_TO_MOVE = []
 TIMEOUT_CHANNEL = int(os.getenv("TIMEOUT_CHANNEL"))
-UNSIMPABLE = [str(BOT_ADMIN_ID), "201503408652419073", "285480424904327179"]
+CANNOT_BE_TIMEOUTED = [str(BOT_ADMIN_ID), "201503408652419073", "285480424904327179"]
 
 
 
@@ -56,38 +56,35 @@ def is_approved(ctx):
 
 
 
-
+# If someone's acting up, removes them from this voice channel and moves them everytime they join back
 @bot.command(name='simp')
 async def simp(ctx, member:discord.Member=None):
 	guild = ctx.message.guild
-	global TIMEOUT_CHANNEL
+	global TIMEOUT_CHANNEL, MOVE_BACK, MEMBER_TO_MOVE
 
-	print(member.id)
-	if str(member.id) in UNSIMPABLE:
-		return
+	if str(member.id) not in CANNOT_BE_TIMEOUTED:
+		channel = guild.get_channel(TIMEOUT_CHANNEL)
+		# If the channel has been deleted
+		# You will need to update .env with the new channel ID, or it'll keep making new ones
+		# everytime the program is restarted
+		if channel == None:
+			TIMEOUT_CHANNEL = await newVoiceChannel(guild, "Steven's Simp Spot")
+		try:
+			await member.move_to(channel)
+			MOVE_BACK = True
+			MEMBER_TO_MOVE.append(member)
+		except:
+			await ctx.send("that simp {} isn't in a voice channel".format(member))
 
-	channel = guild.get_channel(TIMEOUT_CHANNEL)
-
-	if channel == None:
-		await guild.create_voice_channel(name="Steven's Simp Spot")
-
-		for c in guild.voice_channels:
-		    if c.name == "Steven's Simp Spot":
-		        channel = c
-		        TIMEOUT_CHANNEL = c.id
-		        os.environ['TIMEOUT_CHANNEL'] = str(TIMEOUT_CHANNEL)
 
 
-	try:
-		await member.move_to(channel)
-		global MOVE_BACK
-		global MEMBER_TO_MOVE 
-		MOVE_BACK = True
-		MEMBER_TO_MOVE.append(member)
-	except:
-		raise ValueExveption("Ssdfs")
-		await ctx.send("that simp {} isn't in a voice channel".format(member))
 
+# Creates a new voice channel
+async def newVoiceChannel(guild, name):
+	await guild.create_voice_channel(name=name)
+	for c in guild.voice_channels:
+	    if c.name == name:
+	        return c.id
 
 
 ## If they try leaving, move them back
@@ -95,20 +92,14 @@ async def simp(ctx, member:discord.Member=None):
 async def on_voice_state_update(member, before, after):
 	global TIMEOUT_CHANNEL
 
-	if MOVE_BACK == True:
-		if member in MEMBER_TO_MOVE:
+	if MOVE_BACK == True: # If there are members to moveback
+		if member in MEMBER_TO_MOVE: # if the member who just moved is on the list
 			if after.channel != None:
-				if after.channel.id != TIMEOUT_CHANNEL:
-					guild = member.guild
-					channel = guild.get_channel(TIMEOUT_CHANNEL)
-					if channel == None:
-						await guild.create_voice_channel(name="Steven's Simp Spot")
+				if channel == None:
+					await newVoiceChannel(guild, "Steven's Simp Spot")
 
-						for c in guild.voice_channels:
-						    if c.name == "Steven's Simp Spot":
-						        channel = c
-						        TIMEOUT_CHANNEL = c.id
-					await member.move_to(channel)
+				await member.move_to(channel)
+		# Nobody else can join the timeout channel
 		else:
 			if after.channel != None:
 				if after.channel.id == TIMEOUT_CHANNEL:
@@ -206,28 +197,26 @@ async def purge(ctx, number):
 # Takes a ticker, date, type, and strike
 @bot.command(aliases=['option'])
 async def op(ctx, *args):
-	string = ' '.join(args)
-
 	try:
-		t, d, o, s, st = mp.parseContractInfo(string)
+		t, d, o, s, st = mp.parseContractInfo(' '.join(args))
 		optionInfo = ou.getOptionInfo(t, d, o, s, st)
 	except:
 		await ctx.send("String could not be parsed. Please check your formatting (`!help`) for more info")
-		return
+		raise ValueError("String could not be parsed")
 
 	# Cleans up the title string
-	cleanOp = "$" + str(t) + " " + d.strftime('%m/%d') + o + " $" + s
+	cleanTitle = "$" + str(t) + " " + d.strftime('%m/%d') + o + " $" + s
 
 	change = round(optionInfo['change'], 2)
+
 	if change < 0:
-		change *= -1
-		change = "-$" + str(change)
+		change = "-$" + str(change * -1)
 		color = 0xff0000
 	else:
 		change = "+$" + str(change)
 		color = 0x00ff00
 
-	embed = discord.Embed(title=cleanOp, description=optionInfo['contractSymbol'], color=color)
+	embed = discord.Embed(title=cleanTitle, description=optionInfo['contractSymbol'], color=color)
 	embed.add_field(name="Last Price", value="$" + str(round(optionInfo['lastPrice'], 2)))
 	embed.add_field(name="Change", value=change)
 	embed.add_field(name="% Change", value=round(optionInfo['percentChange'], 2))
@@ -242,7 +231,6 @@ async def op(ctx, *args):
 	await ctx.send(embed=embed)
 
 
-	
 
 
 # Returns an option chain
@@ -254,24 +242,25 @@ async def ops(ctx, *args):
 	try: # Tries parsing the stirng
 		ticker, date = mp.parseChainInfo(string)
 	except:
-		await ctx.send("Please check the formatting and the ticker spelling")
+		await ctx.send("String could not be parsed - please check the formatting and the ticker spelling")
 		raise ValueError("Improperly formatted input")
 
 	# Initializes the embed
 	embed = discord.Embed(title=string.upper(), description=("When a date is specified, 5 options above/below "
 		"the current price will be returned\nFormat: `Strike Price`\nCall Option\nPut Option"), color=0x0000ff)
 
-	# If we're not given a date:
-	if date == None:
-		embed.add_field(name="Availible Dates", value = ou.getChainDates(ticker))
-		embed.add_field(name="More Info", value="To search more specifically, use `!ops ticker date`", inline=False)
-	# Else, we have a date : try to get the info
-	else:
-		try:
+	try:
+		# If we're not given a date:
+		if date == None:
+			embed.add_field(name="Availible Dates", value = ou.getChainDates(ticker))
+			embed.add_field(name="More Info", value="To search more specifically, use `!ops ticker date`", inline=False)
+		# Else, we have a date : try to get the info
+		else:
 			embed = ou.printChain(ticker, int(date.timestamp()), embed)
-		except:
-			await ctx.send("No data found. Please check the formatting, ticker spelling, and date")
-			raise ValueError("No data found for input")
+	except:
+		await ctx.send("No data found. Please check the formatting, ticker spelling, and date")
+		raise ValueError("No data found for input")
+	
 	embed.set_footer(text="Data requested " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)'))
 	await ctx.send(embed=embed)
 
@@ -386,10 +375,9 @@ async def remove(ctx,amount:int=0,member:discord.Member=None):
 
 
 
-# Checks your portfolio value
-@bot.command(pass_context=True)
-async def portfolio(ctx):
-	ID = str(ctx.message.author.id)
+# Checks a member's portfolio by ID
+async def memberPortfolio(id):
+	ID = str(id)
 	check_id(ID)
 
 	optionValue, change, percentChange = ou.optionsPortfolioValue(currency.data[ID]['symbols'])
@@ -399,9 +387,20 @@ async def portfolio(ctx):
 	totalChange = round(change + stockChange, 2)
 	totalPercentChange = round(percentChange + stockPercentChange, 2)
 
+	return totalValue, totalChange, totalPercentChange, optionValue, stockValue
+
+
+
+
+# Checks your portfolio value
+@bot.command(pass_context=True)
+async def portfolio(ctx):
+	value, change, percentChange, optionValue, stockValue = await memberPortfolio(ctx.message.author.id)
+
 	await ctx.send(("your broke ass only has ${0} (Change: ${1} / {2}%)\n"
 		"Investing power: ${3}\nOptions: ${4}\n"
 		"Stocks: ${5}").format(totalValue, totalChange, totalPercentChange, currency.data[ID]['currency'], optionValue, stockValue))
+	
 	if str(ctx.message.author.id) == "160507791059058688":
 		await ctx.send("Steven?: true\nSimp?: true\nHotel?: Trivago")
 
@@ -416,22 +415,17 @@ async def leaderboard(ctx):
 	members = []
 	for ID, assets in currency.data.items():
 		if ID != 'name':
-			optionValue, change, percentChange = ou.optionsPortfolioValue(assets['symbols'])
-			totalValue = optionValue + assets['currency']
+			totalValue, *trash = await memberPortfolio(ID)
 			members.append((ID, totalValue))
 
 	if len(members) == 0:
-		await bot.say('Leaderboard is empty')
-		return
+		return await ctx.send('Leaderboard is empty')
 
-	ordered = sorted(members,key=lambda x:x[1] ,reverse=True )
-	players = ''
-	assets = ''
+	ordered = sorted(members, key=lambda x:x[1], reverse=True)
+	players, assets = '', ''
 
 	for ID, playerAssets in ordered:
-		player = '<@{}>'.format(ID)
-        #await client.send_message(message.channel, ' : %s is the best ' % myid) #discord.utils.get(bot.get_all_members(), id=ID)
-		players += player + '\n'
+		players += '<@{}>\n'.format(ID)
 		assets += "${}".format(playerAssets) + '\n'
 
 	embed = discord.Embed(title='Leaderboard')
@@ -444,7 +438,7 @@ async def leaderboard(ctx):
 
 # validPurchase (float currentLiquid, float price)
 # Checks if this is a valid purchase
-def validPurchase(currentLiquid, price):
+async def validPurchase(currentLiquid, price):
 	if currentLiquid > price:
 		return True
 	else:
@@ -453,7 +447,7 @@ def validPurchase(currentLiquid, price):
 
 # buySymbol(data, list contractArgs, int numberOfContracts)
 
-def buySymbol(data, contractArgs, numberOfContracts):
+async def buySymbol(data, contractArgs, numberOfContracts):
 	currentLiquid = data['currency']
 
 	if len(contractArgs) == 1: # this is a stock

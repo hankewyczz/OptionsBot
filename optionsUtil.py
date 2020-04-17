@@ -146,17 +146,14 @@ def getStockInfo(ticker):
 # getChartInfo (String string)
 # given a stirng as input, it splits and parses it using parseDurationInfo and getOptionInfo
 def getChartInfo(string):
-	string = string.upper()
-	time = string.split(" ")[-1]
+	time = string.upper()
+	time = time.split(" ")[-1]
 
 	if time[-1:].isalpha():
-		try:
-			num = mp.parseDurationInfo(time)
-		except:
-			raise ValueError("Couldn't parse the option info")
-
+		num = mp.parseDurationInfo(time)
 	else: 
 		num = int(time[-1:])
+
 	try:
 		contractInfo = string.replace(time, '')
 		t, d, o, s, cS = mp.parseContractInfo(contractInfo)
@@ -173,23 +170,22 @@ def getChartInfo(string):
 # getChainDates (String ticker)
 # Given the database, formats and prints the optionchain
 def getChainDates(ticker):
-	url = baseURL + ticker
 	try:
-		data = loadFrom(url)['optionChain']['result'][0]['expirationDates']
+		data = loadFrom(baseURL + ticker)['optionChain']['result'][0]['expirationDates']
 	except:
 		raise ValueError("Could not load data from URL")
 
 	result = ""
-	year = datetime.now().year
-
 	for datum in data:
 		date = datetime.utcfromtimestamp(datum)
-		if date.year == year:
+		# Makes the dates in this year more readable
+		if date.year == datetime.now().year:
 			date = date.strftime('%b %d')
+		# Long-term options
 		else:
 			date = date.strftime('%m/%d/%y')
-		result += str(date) + ", "
 
+		result += str(date) + ", "
 	return result
 
 
