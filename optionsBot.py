@@ -137,19 +137,20 @@ async def help(ctx):
 
 	misc = ("`!ping` : Responds 'pong'\n\n`!steven` : Checks if Steven is a simp\n\n")
 	
-	options = ("`!op <TICKER> <DATE><TYPE> <STRIKE>`\n`(alias: !option)` : Returns information about a specific option. The string formatting is pretty loose "
-	 "(aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p $400.50`, `!op T 1/18/22C 2010.50`\n\n"
-	 "`!ops <TICKER> <DATE>**`\n`(alias: !optionchain, !opc)` : Returns information about an options chain. Calling `!ops <TICKER>` will return a list of availible dates, " 
-	 "and calling `!ops <TICKER> <DATE>` will return more specific information\n\n")
+	options = ("`!op <TICKER> <DATE><TYPE> <STRIKE>`\n`(alias: !option)` : Returns information about a specific option. "
+		"The string formatting is pretty loose (aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p "
+		"$400.50`, `!op T 1/18/22C 2010.50`\n\n`!ops <TICKER> <DATE>**`\n`(alias: !optionchain, !opc)` : Returns "
+		"information about an options chain. Calling `!ops <TICKER>` will return a list of availible dates, and calling "
+		"`!ops <TICKER> <DATE>` will return more specific information\n\n")
 
 	charting = ("`!c <TICKER> <DATE><TYPE> <STRIKE> <DURATION>` : Returns a chart of the price and volume of an option. "
-		"The formatting is identical to `!op`, with the addition of a <DURATION> field. This takes a numberical value and date type "
-		"(valid options are 'd', 'm', 'y'). **NOTE**: it is unlikely that data will be availible for the option "
-		"more than a month back.\n\n`!chartstock <STOCK_TICKER> <DURATION>`\n`(alias: !cs)` : Returns a chart of the price "
-		"and volume of a STOCK\n\n")
+		"The formatting is identical to `!op`, with the addition of a <DURATION> field. This takes a numberical value "
+		"and date type (valid options are 'd', 'm', 'y'). **NOTE**: it is unlikely that data will be availible for the "
+		"option more than a month back.\n\n`!chartstock <STOCK_TICKER> <DURATION>`\n`(alias: !cs)` : Returns a chart of "
+		"the price and volume of a STOCK\n\n")
 
-	trading = ("`!buy (<TICKER> OR <TICKER> <DATE><TYPE> <STRIKE>) <N>` : Buys *N* contracts/shares of the given option or stock\n\n"
-		"`!portfolio` :  Returns the value of your portfolio (broken down into categories)\n\n"
+	trading = ("`!buy (<TICKER> OR <TICKER> <DATE><TYPE> <STRIKE>) <N>` : Buys *N* contracts/shares of the given option "
+		"or stock\n\n`!portfolio` :  Returns the value of your portfolio (broken down into categories)\n\n"
 		"`!leaderboard` : Returns everyone's standings on the leaderboard")
 
 	embed.add_field(name="Misc", value=misc, inline=False)
@@ -179,7 +180,7 @@ async def ping(ctx):
 
 # Echo (don't tell steven)
 @bot.command(name='echo')
-@commands.check(is_approved)
+#@commands.check(is_approved)
 async def echo(ctx, *args):
 	msg = ' '.join(args)
 	await ctx.send(msg)
@@ -231,7 +232,8 @@ async def op(ctx, *args):
 	embed.add_field(name="Bid / Ask", value="$" + str(round(optionInfo['bid'], 2)) + " / $" + str(round(optionInfo['ask'], 2)))
 	embed.add_field(name="B/A Spread", value="$" + str(round(round(optionInfo['ask'], 2) - round(optionInfo['bid'], 2), 2)))
 
-	embed.set_footer(text="Data requested at " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)') + "\nData may not be accurate as of the time requested due to API delay")
+	embed.set_footer(text="Data requested at " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)') + 
+		"\nData may not be accurate as of the time requested due to API delay")
 
 	await ctx.send(embed=embed)
 
@@ -318,7 +320,8 @@ async def cs(ctx, *args):
 		else:
 			interval = "1d"
 	except:
-		await ctx.send("Invalid duration format (Format: XY, where X is a number and Y is one of : d, m, y)\neg. 5d, 13d, 3m, 1y")
+		await ctx.send("Invalid duration format (Format: XY, where X is a number and Y is one of "
+			": d, m, y)\neg. 5d, 13d, 3m, 1y")
 	
 	# Tries generating the chart
 	try:
@@ -329,9 +332,8 @@ async def cs(ctx, *args):
 		await ctx.message.channel.send("Price and Volume Changes", file=file)
 	except:
 		await ctx.send("No data found. Is the ticker spelled correctly?\nThis may happen due to interval lengths - "
-			"the specified interval may be too small (for example, if you call 1D over the weekend, the day would not have"
-			"any trading data). More commonly, the interval might be too large")
-
+			"the specified interval may be too small (for example, if you call 1D over the weekend, the day would "
+			"not have any trading data). More commonly, the interval might be too large")
 		currency.data[ID]
 
 
@@ -504,8 +506,8 @@ async def buySymbol(data, *args):
 			data['symbols'].append([symbol, numberOfContracts])
 
 	else:
-		return await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
-		raise ValueError("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
+		return await ctx.send("Please check formatting (`!help`)")
+		raise ValueError("Please check formatting (`!help`)")
 
 	data['currency'] -= price
 	return data
@@ -522,8 +524,8 @@ async def buy(ctx, *args):
 		data = await buySymbol(currency.data[ID], contractArgs, int(args[-1]))
 		currency.data[ID] = data
 	except:
-		await ctx.send("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
-		raise ValueError("Please check formatting (must follow the formatting for `!op` for options, or just the ticker for stocks")
+		await ctx.send("Please check formatting (`!help`)")
+		raise ValueError("Please check formatting (`!help`)")
 	
 	currency.save()
 	await ctx.send("Purchase sucessful")

@@ -90,7 +90,8 @@ class Chart:
 	# Given the chart duration, determine x-Axis formatting
 	def tickFormatter(self, length, ax2):
 		# Sets the tick formatting for the x-axis
-		formatting = {1: ["%H:%M", 1, "%H:%M", 8], 2: ["%m/%d", 24, "%H:%M", 4], 5: ["%m/%d", 24, "%H:%M", 12], 10: ["%m/%d", 24, "%H:%M", 48]}
+		times = {1: ["%H:%M", 1, "%H:%M", 8], 2: ["%m/%d", 24, "%H:%M", 4], 
+		5: ["%m/%d", 24, "%H:%M", 12], 10: ["%m/%d", 24, "%H:%M", 48]}
 
 		# handles the smalle cases
 		if length <= 10:
@@ -98,11 +99,11 @@ class Chart:
 				length = 5
 			elif length > 2 and length < 5:
 				length = 2
-			majF, majL, minF, minL = formatting[length][0], formatting[length][1], formatting[length][2], formatting[length][3]
+			majF, majL, minF, minL = times[length][0], times[length][1], times[length][2], times[length][3]
 
 		# long-term cases
 		elif length > 10:
-			majF, majL, minF, minL = formatting[10][0], 24 * int(length/10), formatting[10][2], 48 * int(length/10)
+			majF, majL, minF, minL = times[10][0], 24 * int(length/10), times[10][2], 48 * int(length/10)
 
 		# Sets the x-axis date formats
 		ax2.xaxis.set_major_formatter(md.DateFormatter(majF))
