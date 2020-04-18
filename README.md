@@ -1,4 +1,4 @@
-# OptionsBot
+# OptionsBot [![BCH compliance](https://bettercodehub.com/edge/badge/zackh105/OptionsBot?branch=master)](https://bettercodehub.com/)
 
 ## What is OptionsBot?
 
