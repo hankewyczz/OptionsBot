@@ -74,36 +74,43 @@ async def simp(ctx, member:discord.Member=None):
 		# everytime the program is restarted
 		if channel == None:
 			TIMEOUT_CHANNEL = await newVoiceChannel(guild, "Steven's Simp Spot")
-		try:
-			await member.move_to(channel)
-			MOVE_BACK = True
-			MEMBER_TO_MOVE.append(member)
-		except:
-			await ctx.send("that simp {} isn't in a voice channel".format(member))
+		else:
+			try:
+				await member.move_to(channel)
+				MOVE_BACK = True
+				MEMBER_TO_MOVE.append(member)
+			except:
+				await ctx.send("that user {} isn't in a voice channel".format(member))
 
 
 
 
 # Creates a new voice channel
 async def newVoiceChannel(guild, name):
+	global TIMEOUT_CHANNEL
+
 	await guild.create_voice_channel(name=name)
 	for c in guild.voice_channels:
 		if c.name == name:
+			TIMEOUT_CHANNEL = c.id
 			return c.id
 
 
 ## If they try leaving, move them back
 @bot.event
 async def on_voice_state_update(member, before, after):
+
 	global TIMEOUT_CHANNEL
 
 	if MOVE_BACK == True: # If there are members to moveback
 		if member in MEMBER_TO_MOVE: # if the member who just moved is on the list
 			if after.channel != None:
-				if channel == None:
-					await newVoiceChannel(guild, "Steven's Simp Spot")
+				if after.channel.id != TIMEOUT_CHANNEL:
+					channel = member.guild.get_channel(TIMEOUT_CHANNEL)
+					if channel == None:
+						channel = await newVoiceChannel(member.guild, "Steven's Simp Spot")
 
-				await member.move_to(channel)
+					await member.move_to(channel)
 		# Nobody else can join the timeout channel
 		else:
 			if after.channel != None:

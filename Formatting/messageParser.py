@@ -3,7 +3,7 @@ from datetime import datetime
 from dateutil import parser
 import re
 import unittest
-import stringFormat as sf
+from Formatting import stringFormat as sf
 
 '''
 ##############
