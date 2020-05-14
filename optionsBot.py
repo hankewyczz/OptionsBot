@@ -62,8 +62,8 @@ def is_approved(ctx):
 
 
 # If someone's acting up, removes them from this voice channel and moves them everytime they join back
-@bot.command(name='simp')
-async def simp(ctx, member:discord.Member=None):
+@bot.command(name='timeout')
+async def timeout(ctx, member:discord.Member=None):
 	guild = ctx.message.guild
 	global TIMEOUT_CHANNEL, MOVE_BACK, MEMBER_TO_MOVE
 
@@ -142,7 +142,7 @@ async def endtimeout(ctx, member:discord.Member=None):
 async def help(ctx):
 	embed = discord.Embed(title="OptionsBot Help", description="Commands and descriptions", color=0x0000ff)
 
-	misc = ("`!ping` : Responds 'pong'\n\n`!steven` : Checks if Steven is a simp\n\n")
+	misc = ("`!ping` : Responds 'pong'")
 	
 	options = ("`!op <TICKER> <DATE><TYPE> <STRIKE>`\n`(alias: !option)` : Returns information about a specific option. "
 		"The string formatting is pretty loose (aside from the spacing). Examples: `!op $spy 6/19c 300`, `!op AAPL 4/17p "
@@ -166,14 +166,6 @@ async def help(ctx):
 	embed.add_field(name="Trading", value=trading, inline=False)
 	await ctx.send(embed=embed)
 
-
-
-
-
-# Steven
-@bot.command(name='steven')
-async def steven(ctx):
-	await ctx.send("is a simp")
 
 
 
