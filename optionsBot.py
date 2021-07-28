@@ -352,6 +352,10 @@ class jFile:
 				self.data = data
 			except:
 				raise ValueError("Could not load data from json file")
+		else:
+			os.mknod(fileName)
+			self.fileName = fileName
+			self.data = {}
 	# Saves the json file 
 	def save(self):
 		with open(self.fileName, "w") as f:
