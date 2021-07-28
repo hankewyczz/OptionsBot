@@ -55,11 +55,7 @@ def is_approved(ctx):
 
 
 
-# ping
-@bot.command(name='wis')
-async def wis(ctx):
-	await ctx.send("WOMEN IN STEM", tts=True)
-	await ctx.send(" https://womeninstem.org/")
+
 
 
 
@@ -216,28 +212,7 @@ async def op(ctx, *args):
 	# Cleans up the title string
 	cleanTitle = "$" + str(t) + " " + d.strftime('%m/%d') + o + " $" + s
 
-	if 'quote' in optionInfo:
-		opChange = optionInfo['quote']['regularMarketChange']
-		cSymbol = optionInfo['quote']['symbol']
-		lastPrice = optionInfo['quote']['regularMarketPreviousClose']
-		perChange = optionInfo['quote']['regularMarketChangePercent']
-		volume = optionInfo['quote']['regularMarketVolume']
-		openInterest = optionInfo['quote']['openInterest']
-		bid = optionInfo['quote']['bid']
-		ask = optionInfo['quote']['ask']
-	else:
-		opChange = optionInfo['change']
-		cSymbol = optionInfo['contractSymbol']
-		lastPrice = optionInfo['lastPrice']
-		perChange = optionInfo['percentChange']
-		volume = optionInfo['volume']
-		openInterest = optionInfo['openInterest']
-		bid = optionInfo['bid']
-		ask = optionInfo['ask']
-
-	print(optionInfo)
-
-	change = round(opChange, 2)
+	change = round(optionInfo['change'], 2)
 
 	if change < 0:
 		change = "-$" + str(change * -1)
@@ -246,14 +221,15 @@ async def op(ctx, *args):
 		change = "+$" + str(change)
 		color = 0x00ff00
 
-	embed = discord.Embed(title=cleanTitle, description=cSymbol, color=color)
-	embed.add_field(name="Last Price", value="$" + str(round(lastPrice, 2)))
+	embed = discord.Embed(title=cleanTitle, description=optionInfo['contractSymbol'], color=color)
+	embed.add_field(name="Last Price", value="$" + str(round(optionInfo['lastPrice'], 2)))
 	embed.add_field(name="Change", value=change)
-	embed.add_field(name="% Change", value=round(perChange, 2))
-	embed.add_field(name="Volume", value=volume)
-	embed.add_field(name="OI", value=round(openInterest, 2))
-	embed.add_field(name="Bid / Ask", value="$" + str(round(bid, 2)) + " / $" + str(round(ask, 2)))
-	embed.add_field(name="B/A Spread", value="$" + str(round(round(ask, 2) - round(bid, 2), 2)))
+	embed.add_field(name="% Change", value=round(optionInfo['percentChange'], 2))
+	embed.add_field(name="IV", value=round(optionInfo['impliedVolatility'], 2))
+	embed.add_field(name="Volume", value=optionInfo['volume'])
+	embed.add_field(name="OI", value=round(optionInfo['openInterest'], 2))
+	embed.add_field(name="Bid / Ask", value="$" + str(round(optionInfo['bid'], 2)) + " / $" + str(round(optionInfo['ask'], 2)))
+	embed.add_field(name="B/A Spread", value="$" + str(round(round(optionInfo['ask'], 2) - round(optionInfo['bid'], 2), 2)))
 
 	embed.set_footer(text="Data requested at " + datetime.today().strftime('%H:%M:%S (%m/%m/%y)') + 
 		"\nData may not be accurate as of the time requested due to API delay")
@@ -377,7 +353,7 @@ class jFile:
 			except:
 				raise ValueError("Could not load data from json file")
 		else:
-			os.mknod(filename)
+			os.mknod(fileName)
 			self.fileName = fileName
 			self.data = {}
 	# Saves the json file 
